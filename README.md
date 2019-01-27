@@ -12,6 +12,10 @@ Usage:
 --channel N
                 SPI Channel on Raspberry pi
 
+--cx address
+                Link Control
+                Address to open for link control data
+
 --tx address
                 Transmit Mode
                 Address to open for tx data
@@ -61,7 +65,7 @@ Usage:
 
 ```
 
-Messages:
+Control Messages:
 ```
 struct Header
 {
@@ -69,20 +73,21 @@ struct Header
     uint8_t trId;
 };
 
-struct RxDataNotification
+struct ReconfigurationRequest
 {
     Header hdr;
-    uint8_t rssi;
-    uint8_t size;
-    uint8_t data[];
+    uint8_t bandwidth;
+    uint8_t codingRate;
+    uint8_t spreadingFactor;
+    uint8_t mtuSize;
+    uint8_t txPower;
+    uint8_t rxGain;
 };
 
-struct TxDataNotification
+struct ReconfigurationComplete
 {
     Header hdr;
-    uint8_t rssi;
-    uint8_t size;
-    uint8_t data[];
+    uint8_t status;
 };
 
 ```
