@@ -1,26 +1,26 @@
 #ifndef __SX127x_HPP__
 #define __SX127x_HPP__
 
-namespace flylora_sx1278
+namespace flylora_sx127x
 {
 
 // RegFifo      0x00
-constexpr uint8_t RegFifo                   = 0x0;
+constexpr uint8_t REGFIFO                   = 0x0;
 
 // RegOpMode    0x01
-constexpr uint8_t RegOpMode                 = 0x01;
-constexpr uint8_t LongRangeModeMask         = 0b10000000;
-constexpr uint8_t AccessSharedRegMask       = 0b01000000; // AccessSharedReg
-constexpr uint8_t LowFrequencyModeOnMask    = 0b00001000; // LowFrequencyModeOn
-constexpr uint8_t ModeMask                  = 0b00000111; // Mode
+constexpr uint8_t REGOPMODE                 = 0x01;
+constexpr uint8_t LONGRANGEMODEMASK         = 0b10000000;
+constexpr uint8_t ACCESSSHAREDREGMASK       = 0b01000000; // AccessSharedReg
+constexpr uint8_t LOWFREQUENCYMODEONMASK    = 0b00001000; // LowFrequencyModeOn
+constexpr uint8_t MODEMASK                  = 0b00000111; // Mode
 
-enum AccessSharedReg            // This bit operates when device is in Lora mode; if set it allows access to FSK registers page located in address space (0x0D:0x3F) while in LoRa mode.
+enum class AccessSharedReg            // This bit operates when device is in Lora mode; if set it allows access to FSK registers page located in address space (0x0D:0x3F) while in LoRa mode.
 {
     LORA,                       // ccess LoRa registers page 0x0D:0x3F
     FSK                         // Access FSK registers page (in mode LoRa) 0x0D:0x3F
 };
 
-enum Mode                       // Device modes
+enum class Mode                       // Device modes
 {
     SLEEP,                      // Sleep
     STDBY,                      // Standby
@@ -33,21 +33,21 @@ enum Mode                       // Device modes
 };
 
 // RegFrMsb     0x06
-constexpr uint8_t RegFrMsb                  = 0x06; // MSB (23:16) of RF carrier frequency
+constexpr uint8_t REGFRMSB                  = 0x06; // MSB (23:16) of RF carrier frequency
 // RegFrMid     0x07
-constexpr uint8_t RegFrMid                  = 0x07; // MSB (15:8) of RF carrier frequency
+constexpr uint8_t REGFRMID                  = 0x07; // MSB (15:8) of RF carrier frequency
 // RegFrLsb     0x08
-constexpr uint8_t RegFrLsb                  = 0x08; // MSB (7:0) of RF carrier frequency
+constexpr uint8_t REGFRLSB                  = 0x08; // MSB (7:0) of RF carrier frequency
 
 inline uint64_t convertRegFrToFrequency(uint32_t regfr, uint64_t fxosc) {return fxosc*regfr/524288;}
 
 // RegPaConfig  0x09
-constexpr uint8_t RegPaConfig               = 0x09;
-constexpr uint8_t PaSelectMask              = 0b10000000; // PaSelect
-constexpr uint8_t MaxPowerMask              = 0b01110000; // MaxPower
-constexpr uint8_t OutputPowerMask           = 0b00001111; // OutputPower
+constexpr uint8_t REGPACONFIG               = 0x09;
+constexpr uint8_t PASELECTMASK              = 0b10000000; // PaSelect
+constexpr uint8_t MAXPOWERMASK              = 0b01110000; // MaxPower
+constexpr uint8_t OUTPUTPOWERMASK           = 0b00001111; // OutputPower
 
-enum PaSelect                   // Selects PA output pin
+enum class PaSelect                   // Selects PA output pin
 {
     RFO,                        // RFO pin. Output power is limited to +14 dBm.
     PA_BOOST                    // PA_BOOST pin. Output power is limited to +20 dBm.
@@ -63,10 +63,10 @@ inline double convertOutputPowerToPout(bool isBoosted, double pmax, uint8_t outp
 }
 
 // RegPaRamp    0x0A
-constexpr uint8_t RegPaRamp                 = 0x0A;
-constexpr uint8_t PaRampMask                = 0b00001111; // PaRamp
+constexpr uint8_t REGPARAMP                 = 0x0A;
+constexpr uint8_t PARAMPMASK                = 0b00001111; // PaRamp
 
-enum PaRamp                     // Rise/Fall time of ramp up/down in FS
+enum class PaRamp                     // Rise/Fall time of ramp up/down in FS
 {
     RAMP_3P4_MS,                   // 3.4 ms
     RAMP_2_MS,                     // 2 ms
@@ -87,9 +87,9 @@ enum PaRamp                     // Rise/Fall time of ramp up/down in FS
 };
 
 // RegPaRamp    0x0B
-constexpr uint8_t RegOcp                 = 0x0B;
-constexpr uint8_t OcpOnMask                 = 0b00100000; // OcpOn
-constexpr uint8_t OcpTrimMask               = 0b00011111; // OcpTrim
+constexpr uint8_t REGOCP                 = 0x0B;
+constexpr uint8_t OCPONMASK                 = 0b00100000; // OcpOn
+constexpr uint8_t OCPTRIMMASK               = 0b00011111; // OcpTrim
 
 inline double convertOcpTrimToImax(uint8_t ocpTrim)
 {
@@ -99,12 +99,12 @@ inline double convertOcpTrimToImax(uint8_t ocpTrim)
 }
 
 // RegLna       0x0C
-constexpr uint8_t RegLna                    = 0x0C;
-constexpr uint8_t LnaGainMask               = 0b11100000; // LnaGain
-constexpr uint8_t LnaBoostLfMask            = 0b00011000; // LnaBoostLf
-constexpr uint8_t LnaBoostHfMask            = 0b00000011; // LnaBoostHf
+constexpr uint8_t REGLNA                    = 0x0C;
+constexpr uint8_t LNAGAINMASK               = 0b11100000; // LnaGain
+constexpr uint8_t LNABOOSTLFMASK            = 0b00011000; // LnaBoostLf
+constexpr uint8_t LNABOOSTHFMASK            = 0b00000011; // LnaBoostHf
 
-enum LnaGain                    // LNA Gain Setting
+enum class LnaGain                    // LNA Gain Setting
 {
     G1 = 1,                     // G1 = maximum gain
     G2,                         // G2
@@ -114,12 +114,12 @@ enum LnaGain                    // LNA Gain Setting
     G6                          // G6 = minimum gain
 };
 
-enum LnaBoostLf                 // Low Frequency (RFI_LF) LNA current adjustment
+enum class LnaBoostLf                 // Low Frequency (RFI_LF) LNA current adjustment
 {
     DEFAULT                     // Default LNA current
 };
 
-enum LnaBoostHf                 // High Frequency (RFI_HF) LNA current adjustment
+enum class LnaBoostHf                 // High Frequency (RFI_HF) LNA current adjustment
 {
     DEFAULT,                    // Default LNA current
     BOOST_ON                    // Boost on, 150% LNA current
@@ -127,65 +127,65 @@ enum LnaBoostHf                 // High Frequency (RFI_HF) LNA current adjustmen
 
 
 // RegFifoAddrPtr               0x0D
-constexpr uint8_t RegFifoAddrPtr            = 0x0D; // SPI interface address pointer in FIFO data buffer
+constexpr uint8_t REGFIFOADDRPTR            = 0x0D; // SPI interface address pointer in FIFO data buffer
 // RegFifoTxBaseAdd             0x0E
-constexpr uint8_t RegFifoTxBaseAdd          = 0x0E; // Write base address in FIFO data buffer for TX modulator
+constexpr uint8_t REGFIFOTXBASEADD          = 0x0E; // Write base address in FIFO data buffer for TX modulator
 // RegFifoRxBaseAdd             0x0F
-constexpr uint8_t RegFifoRxBaseAdd          = 0x0F; // Read base address in FIFO data buffer for RX demodulator
+constexpr uint8_t REGFIFORXBASEADD          = 0x0F; // Read base address in FIFO data buffer for RX demodulator
 // RegFifoRxCurrentAddr         0x10
-constexpr uint8_t RegFifoRxCurrentAddr      = 0x10; // Start address (in data buffer) of last packet received
+constexpr uint8_t REGFIFORXCURRENTADDR      = 0x10; // Start address (in data buffer) of last packet received
 
 // RegIrqFlagsMaskMask          0x11
-constexpr uint8_t RegIrqFlagsMaskMask       = 0x11;
-constexpr uint8_t RxTimeoutMaskMask         = 0b10000000; // Timeout interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
-constexpr uint8_t RxDoneMaskMask            = 0b01000000; // Packet reception complete interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
-constexpr uint8_t PayloadCrcErrorMaskMask   = 0b00100000; // Payload CRC error interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
-constexpr uint8_t ValidHeaderMaskMask       = 0b00010000; // Valid header received in Rx mask: setting this bit masks the corresponding IRQ in RegIrqFlags
-constexpr uint8_t TxDoneMaskMask            = 0b00001000; // FIFO Payload transmission complete interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
-constexpr uint8_t CadDoneMaskMask           = 0b00000100; // CAD complete interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
-constexpr uint8_t FhssChangeChannelMaskMask = 0b00000010; // FHSS change channel interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
-constexpr uint8_t CadDetectedMaskMask       = 0b00000001; // Cad Detected Interrupt Mask: setting this bit masks the corresponding IRQ in RegIrqFlags
+constexpr uint8_t REGIRQFLAGSMASKMASK       = 0x11;
+constexpr uint8_t RXTIMEOUTMASKMASK         = 0b10000000; // Timeout interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
+constexpr uint8_t RXDONEMASKMASK            = 0b01000000; // Packet reception complete interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
+constexpr uint8_t PAYLOADCRCERRORMASKMASK   = 0b00100000; // Payload CRC error interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
+constexpr uint8_t VALIDHEADERMASKMASK       = 0b00010000; // Valid header received in Rx mask: setting this bit masks the corresponding IRQ in RegIrqFlags
+constexpr uint8_t TXDONEMASKMASK            = 0b00001000; // FIFO Payload transmission complete interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
+constexpr uint8_t CADDONEMASKMASK           = 0b00000100; // CAD complete interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
+constexpr uint8_t FHSSCHANGECHANNELMASKMASK = 0b00000010; // FHSS change channel interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
+constexpr uint8_t CADDETECTEDMASKMASK       = 0b00000001; // Cad Detected Interrupt Mask: setting this bit masks the corresponding IRQ in RegIrqFlags
 
 // RegIrqFlags                  0x12
-constexpr uint8_t RegIrqFlags               = 0x12;
-constexpr uint8_t RxTimeoutMask             = 0b10000000; // Timeout interrupt: writing a 1 clears the IRQ
-constexpr uint8_t RxDoneMask                = 0b01000000; // Packet reception complete interrupt: writing a 1 clears the IRQ
-constexpr uint8_t PayloadCrcErrorMask       = 0b00100000; // Payload CRC error interrupt: writing a 1 clears the IRQ
-constexpr uint8_t ValidHeaderMask           = 0b00010000; // Valid header received in Rx mask: setting this bit masks the corresponding IRQ in RegIrqFlags
-constexpr uint8_t TxDoneMask                = 0b00001000; // FIFO Payload transmission complete interrupt: writing a 1 clears the IRQ
-constexpr uint8_t CadDoneMask               = 0b00000100; // CAD complete: write to clear: writing a 1 clears the IRQ
-constexpr uint8_t FhssChangeChannelMask     = 0b00000010; // FHSS change channel interrupt: writing a 1 clears the IRQ
-constexpr uint8_t CadDetectedMask           = 0b00000001; // Valid Lora signal detected during CAD operation: writing a 1 clears the IRQ
+constexpr uint8_t REGIRQFLAGS               = 0x12;
+constexpr uint8_t RXTIMEOUTMASK             = 0b10000000; // Timeout interrupt: writing a 1 clears the IRQ
+constexpr uint8_t RXDONEMASK                = 0b01000000; // Packet reception complete interrupt: writing a 1 clears the IRQ
+constexpr uint8_t PAYLOADCRCERRORMASK       = 0b00100000; // Payload CRC error interrupt: writing a 1 clears the IRQ
+constexpr uint8_t VALIDHEADERMASK           = 0b00010000; // Valid header received in Rx mask: setting this bit masks the corresponding IRQ in RegIrqFlags
+constexpr uint8_t TXDONEMASK                = 0b00001000; // FIFO Payload transmission complete interrupt: writing a 1 clears the IRQ
+constexpr uint8_t CADDONEMASK               = 0b00000100; // CAD complete: write to clear: writing a 1 clears the IRQ
+constexpr uint8_t FHSSCHANGECHANNELMASK     = 0b00000010; // FHSS change channel interrupt: writing a 1 clears the IRQ
+constexpr uint8_t CADDETECTEDMASK           = 0b00000001; // Valid Lora signal detected during CAD operation: writing a 1 clears the IRQ
 
 // RegRxNbBytes                 0x13
-constexpr uint8_t RegRxNbBytes              = 0x13; // Number of payload bytes of latest packet received
+constexpr uint8_t REGRXNBBYTES              = 0x13; // Number of payload bytes of latest packet received
 
 // RegRxHeaderCntValueMsb       0x14
-constexpr uint8_t RegRxHeaderCntValueMsb    = 0x14; // Number of valid headers received since last transition into Rx mode, MSB(15:8). Header and packet counters are reseted in Sleep mode.
+constexpr uint8_t REGRXHEADERCNTVALUEMSB    = 0x14; // Number of valid headers received since last transition into Rx mode, MSB(15:8). Header and packet counters are reseted in Sleep mode.
 // RegRxHeaderCntValueLsb       0x15
-constexpr uint8_t RegRxHeaderCntValueLsb    = 0x15; // Number of valid headers received since last transition into Rx mode, LSB(7:0). Header and packet counters are reseted in Sleep mode.
+constexpr uint8_t REGRXHEADERCNTVALUELSB    = 0x15; // Number of valid headers received since last transition into Rx mode, LSB(7:0). Header and packet counters are reseted in Sleep mode.
 
 // RegRxPacketCntValueMsb       0x16
-constexpr uint8_t RegRxPacketCntValueMsb    = 0x16; // Number of valid packets received since last transition into Rx mode, MSB(15:8). Header and packet counters are reseted in Sleep mode.
+constexpr uint8_t REGRXPACKETCNTVALUEMSB    = 0x16; // Number of valid packets received since last transition into Rx mode, MSB(15:8). Header and packet counters are reseted in Sleep mode.
 // RegRxPacketCntValueLsb       0x17
-constexpr uint8_t RegRxPacketCntValueLsb    = 0x17; // Number of valid packets received since last transition into Rx mode, LSB(7:0). Header and packet counters are reseted in Sleep mode.
+constexpr uint8_t REGRXPACKETCNTVALUELSB    = 0x17; // Number of valid packets received since last transition into Rx mode, LSB(7:0). Header and packet counters are reseted in Sleep mode.
 
 // RegModemStat                 0x18
-constexpr uint8_t RegModemStat              = 0x18;
-constexpr uint8_t RxCodingRateMask          = 0b11100000; // Coding rate of last header received
-constexpr uint8_t ModemClearMask            = 0b00010000; // Modem Clear
-constexpr uint8_t HeaderInfoValidMask       = 0b00001000; // Header Info Valid
-constexpr uint8_t RxOnGoingMask             = 0b00000100; // RxOnGoingMask
-constexpr uint8_t SignalSynchronizedMask    = 0b00000010; // Signal Synchronized
-constexpr uint8_t SignalDetectedMask        = 0b00000001; // Signal Detected
+constexpr uint8_t REGMODEMSTAT              = 0x18;
+constexpr uint8_t RXCODINGRATEMASK          = 0b11100000; // Coding rate of last header received
+constexpr uint8_t MODEMCLEARMASK            = 0b00010000; // Modem Clear
+constexpr uint8_t HEADERINFOVALIDMASK       = 0b00001000; // Header Info Valid
+constexpr uint8_t RXONGOINGMASK             = 0b00000100; // RxOnGoingMask
+constexpr uint8_t SIGNALSYNCHRONIZEDMASK    = 0b00000010; // Signal Synchronized
+constexpr uint8_t SIGNALDETECTEDMASK        = 0b00000001; // Signal Detected
 
 // RegPktSnrValue               0x19
-constexpr uint8_t RegPktSnrValue            = 0x19;
+constexpr uint8_t REGPKTSNRVALUE            = 0x19;
 
 double convertPktSnrValueToSNR(uint8_t pktSnr) {return -pktSnr/4;}
 
 // RegPktRssiValue              0x1A
-constexpr uint8_t RegPktRssiValue           = 0x1A; // RSSI of the latest packet received (dBm)
+constexpr uint8_t REGPKTRSSIVALUE           = 0x1A; // RSSI of the latest packet received (dBm)
 
 double convertPacketRssiValueToRssi(bool isHF, uint8_t pktRssi)
 {
@@ -195,7 +195,7 @@ double convertPacketRssiValueToRssi(bool isHF, uint8_t pktRssi)
 }
 
 // RegRssiValue                 0x1B
-constexpr uint8_t RegRssiValue              = 0x1B; // Current RSSI value (dBm)
+constexpr uint8_t REGRSSIVALUE              = 0x1B; // Current RSSI value (dBm)
 
 double convertRssiValueToRssi(bool isHF, uint8_t rssi)
 {
@@ -205,19 +205,19 @@ double convertRssiValueToRssi(bool isHF, uint8_t rssi)
 }
 
 // RegHopChannel                0x1C
-constexpr uint8_t RegHopChannel             = 0x1C;
-constexpr uint8_t PllTimeoutMask            = 0b00000001; // PLL failed to lock while attempting a TX/RX/CAD operation
-constexpr uint8_t CrcOnPayloadMask          = 0b00000001; // CRC Information extracted from the received packet header (Explicit header mode only)
-constexpr uint8_t FhssPresentChannelMask    = 0b00011111; // Current value of frequency hopping channel in use
+constexpr uint8_t REGHOPCHANNEL             = 0x1C;
+constexpr uint8_t PLLTIMEOUTMASK            = 0b00000001; // PLL failed to lock while attempting a TX/RX/CAD operation
+constexpr uint8_t CRCONPAYLOADMASK          = 0b00000001; // CRC Information extracted from the received packet header (Explicit header mode only)
+constexpr uint8_t FHSSPRESENTCHANNELMASK    = 0b00011111; // Current value of frequency hopping channel in use
 
 
 // RegModemConfig1              0x1D
-constexpr uint8_t RegModemConfig1           = 0x1D;
-constexpr uint8_t BwMask                    = 0b11110000; // Bw
-constexpr uint8_t CodingRateMask            = 0b00001110; // CodingRate
-constexpr uint8_t ImplicitHeaderModeOnMask  = 0b00000001; // ImplicitHeaderModeOn
+constexpr uint8_t REGMODEMCONFIG1           = 0x1D;
+constexpr uint8_t BWMASK                    = 0b11110000; // Bw
+constexpr uint8_t CODINGRATEMASK            = 0b00001110; // CodingRate
+constexpr uint8_t IMPLICITHEADERMODEONMASK  = 0b00000001; // ImplicitHeaderModeOn
 
-enum Bw
+enum class Bw
 {
     BW_7P8_KHZ,                  // 7.8 KHZ
     BW_10P4_KHZ,                 // 10.4 KHZ
@@ -231,7 +231,7 @@ enum Bw
     BW_500_KHZ,                  // 500 KHZ
 };
 
-enum CodingRate
+enum class CodingRate
 {
     CR_4V5,                      // 4/5
     CR_4V6,                      // 4/6
@@ -240,13 +240,13 @@ enum CodingRate
 };
 
 // RegModemConfig2              0x1E
-constexpr uint8_t RegModemConfig1           = 0x1E;
-constexpr uint8_t SpreadngFactorMask        = 0b11110000; // SpreadngFactor
-constexpr uint8_t TxContinousModeMask       = 0b00001000; // TxContinousMode
-constexpr uint8_t RxPayloadCrcOnMask        = 0b00000100; // RxPayloadCrcOn
-constexpr uint8_t SymbTimeoutMsbMask        = 0b00000011; // SymbTimeout MSB
+constexpr uint8_t REGMODEMCONFIG2           = 0x1E;
+constexpr uint8_t SPREADNGFACTORMASK        = 0b11110000; // SpreadngFactor
+constexpr uint8_t TXCONTINOUSMODEMASK       = 0b00001000; // TxContinousMode
+constexpr uint8_t RXPAYLOADCRCONMASK        = 0b00000100; // RxPayloadCrcOn
+constexpr uint8_t SYMBTIMEOUTMSBMASK        = 0b00000011; // SymbTimeout MSB
 
-enum SpreadngFactor
+enum class SpreadngFactor
 {
     SF_6 = 6,                   // SF6
     SF_7,                       // SF7
@@ -258,7 +258,7 @@ enum SpreadngFactor
 };
 
 // RegSymbTimeoutLsb              0x1E
-constexpr uint8_t RegSymbTimeoutLsb         = 0x1F; // SymbTimeout MSB
+constexpr uint8_t REGSYMBTIMEOUTLSB         = 0x1F; // SymbTimeout MSB
 
 inline double convertSymbTimeoutToTimeout(double ts, uint16_t symbTimeout)
 {
@@ -266,46 +266,46 @@ inline double convertSymbTimeoutToTimeout(double ts, uint16_t symbTimeout)
 }
 
 // RegPreambleMsb               0x20
-constexpr uint8_t RegPreambleMsb            = 0x20; // Preamble Length MSB
+constexpr uint8_t REGPREAMBLEMSB            = 0x20; // Preamble Length MSB
 // RegPreambleLsb               0x21
-constexpr uint8_t RegPreambleLsb            = 0x21; // Preamble Length LSB
+constexpr uint8_t REGPREAMBLELSB            = 0x21; // Preamble Length LSB
 // RegPayloadLength             0x22
-constexpr uint8_t RegPayloadLength          = 0x22; // Payload Length
+constexpr uint8_t REGPAYLOADLENGTH          = 0x22; // Payload Length
 // RegMaxPayloadLength          0x23
-constexpr uint8_t RegMaxPayloadLength       = 0x23; // Max Payload Length
+constexpr uint8_t REGMAXPAYLOADLENGTH       = 0x23; // Max Payload Length
 // RegHopPeriod                 0x24
-constexpr uint8_t RegHopPeriod              = 0x24; // Frequency Hopping Period
+constexpr uint8_t REGHOPPERIOD              = 0x24; // Frequency Hopping Period
 // RegFifoRxByteAddr            0x25
-constexpr uint8_t RegFifoRxByteAddr         = 0x25; // Current value of RX databuffer pointe
+constexpr uint8_t REGFIFORXBYTEADDR         = 0x25; // Current value of RX databuffer pointe
 
 
 // RegModemConfig3              0x26
-constexpr uint8_t RegModemConfig3           = 0x26;
-constexpr uint8_t LowDataRateOptimizeMask   = 0b00001000; // LowDataRateOptimize
-constexpr uint8_t AgcAutoOnMask             = 0b00000100; // AgcAutoOn
+constexpr uint8_t REGMODEMCONFIG3           = 0x26;
+constexpr uint8_t LOWDATARATEOPTIMIZEMASK   = 0b00001000; // LowDataRateOptimize
+constexpr uint8_t AGCAUTOONMASK             = 0b00000100; // AgcAutoOn
 
 // RegPpmCorrection             0x27
-constexpr uint8_t RegPpmCorrection          = 0x27; // Data rate offset value, used in conjunction with AFC
+constexpr uint8_t REGPPMCORRECTION          = 0x27; // Data rate offset value, used in conjunction with AFC
 
 // RegFeiMsb                    0x28
-constexpr uint8_t RegFeiMsb                 = 0x28;
-constexpr uint8_t FeiMsbMask                = 0b00001111; // FrequencyErrpr MSB
+constexpr uint8_t REGFEIMSB                 = 0x28;
+constexpr uint8_t FEIMSBMASK                = 0b00001111; // FrequencyErrpr MSB
 
 // RegFeiMid                    0x29
-constexpr uint8_t RegFeiMid                 = 0x29; // FrequencyErrpr MID
+constexpr uint8_t REGFEIMID                 = 0x29; // FrequencyErrpr MID
 // RegFeiLsb                    0x2A
-constexpr uint8_t RegFeiLsb                 = 0x2A; // FrequencyErrpr LSB
+constexpr uint8_t REGFEILSB                 = 0x2A; // FrequencyErrpr LSB
 
 inline double convertFreqErrorToFError(uint32_t freqError, uint32_t bw, uint32_t fxtal) {return (freqError*16777216*bw)/(fxtal*500);}
 
 // RegRssiWideband              0x2C
-constexpr uint8_t RegRssiWideband           = 0x2C; // Wideband RSSI measurement used to locally generate a random number
+constexpr uint8_t REGRSSIWIDEBAND           = 0x2C; // Wideband RSSI measurement used to locally generate a random number
 
 // RegDetectOptimize            0x31
-constexpr uint8_t RegDetectOptimize         = 0x31;
-constexpr uint8_t DetectOptimizeMask        = 0x00000011;
+constexpr uint8_t REGDETECTOPTIMIZE         = 0x31;
+constexpr uint8_t DETECTOPTIMIZEMASK        = 0x00000011;
 
-enum DetectOptimize             // LoRa Detection Optimize
+enum class DetectOptimize             // LoRa Detection Optimize
 {
     SF_6 = 5,                   // SF6
     SF_7 = 3,                   // SF7
@@ -317,14 +317,14 @@ enum DetectOptimize             // LoRa Detection Optimize
 };
 
 // RegInvertIQ                  0x33
-constexpr uint8_t RegInvertIQ               = 0x33;
-constexpr uint8_t InvertIQmASK              = 0x01000000; // Invert the LoRa I and Q signals
+constexpr uint8_t REGINVERTIQ               = 0x33;
+constexpr uint8_t INVERTIQMASK              = 0b01000000; // Invert the LoRa I and Q signals
 
 
 // RegDetectionThreshold        0x37
-constexpr uint8_t RegDetectionThreshold     = 0x37;
+constexpr uint8_t REGDETECTIONTHRESHOLD     = 0x37;
 
-enum DetectionThreshold         // LoRa detection threshold
+enum class DetectionThreshold         // LoRa detection threshold
 {
     SF_6 = 0xC,                 // SF6
     SF_7 = 0xA,                 // SF7
@@ -336,12 +336,12 @@ enum DetectionThreshold         // LoRa detection threshold
 };
 
 // RegSyncWord                  0x39
-constexpr uint8_t RegSyncWord               = 0x39; // LoRa Sync Word
+constexpr uint8_t REGSYNCWORD               = 0x39; // LoRa Sync Word
 
 // RegDioMapping1               0x40
-constexpr uint8_t RegDioMapping1            = 0x40; // DIO Mapping for DIO3:DIO0
+constexpr uint8_t REGDIOMAPPING1            = 0x40; // DIO Mapping for DIO3:DIO0
 
-enum DioMapping1
+enum class DioMapping1
 {
     CadDone_FhssChangeChannel_RxTimeout_RxDone,
     ValidHeader_FhssChangeChannel_FhssChangeChannel_TxDone,
@@ -349,53 +349,53 @@ enum DioMapping1
 };
 
 // RegDioMapping2               0x41
-constexpr uint8_t RegDioMapping2            = 0x41; // DIO Mapping for DIO5:DIO4
+constexpr uint8_t REGDIOMAPPING2            = 0x41; // DIO Mapping for DIO5:DIO4
 
-enum DioMapping1
+enum class DioMapping2
 {
     ModeReady_CadDetected,
     ClkOut_PllLock,
     ClkOut_PllLock_2,
-}
+};
 
 // RegVersion                   0x42
-constexpr uint8_t RegVersion                = 0x42; // Version
+constexpr uint8_t REGVERSION                = 0x42; // Version
 
 // RegPllHop                    0x42
-constexpr uint8_t RegPllHop                 = 0x42;
-constexpr uint8_t FastHopOnMask             = 0b10000000; // FastHopOn
+constexpr uint8_t REGPLLHOP                 = 0x42;
+constexpr uint8_t FASTHOPONMASK             = 0b10000000; // FastHopOn
 
 // RegTcxo                      0x4B
-constexpr uint8_t RegTcxo                   = 0x4B;
-constexpr uint8_t TcxoInputOnMask           = 0b00001000;
+constexpr uint8_t REGTCXO                   = 0x4B;
+constexpr uint8_t TCXOINPUTONMASK           = 0b00001000;
 
 // RegPaDac                     0x4D
-constexpr uint8_t RegPaDac                  = 0x4D;
-constexpr uint8_t PaDacMask                 = 0b00000011; // PaDac
-enum PaDac
+constexpr uint8_t REGPADAC                  = 0x4D;
+constexpr uint8_t PADACMASK                 = 0b00000011; // PaDac
+enum class PaDac
 {
     DEFAULT = 4,
     PA_BOOST = 7
 };
 
 // RegFormerTemp                0x5B
-constexpr uint8_t RegFormerTemp             = 0x5B; // LoRa Sync Word
+constexpr uint8_t REGFORMERTEMP             = 0x5B; // LoRa Sync Word
 
 // RegAgcRef                    0x61
-constexpr uint8_t RegAgcRef                 = 0x61;
-constexpr uint8_t AgcReferenceLevelMask     = 0b00111111;
+constexpr uint8_t REGAGCREF                 = 0x61;
+constexpr uint8_t AGCREFERENCELEVELMASK     = 0b00111111;
 
 // RegAgcThresh1                0x62
-constexpr uint8_t RegAgcThresh1             = 0x62; // Defines the 1st AGC Threshold
+constexpr uint8_t REGAGCTHRESH1             = 0x62; // Defines the 1st AGC Threshold
 // RegAgcThresh2                0x63
-constexpr uint8_t RegAgcThresh2             = 0x63; // Defines the 2nd AGC Threshold
+constexpr uint8_t REGAGCTHRESH2             = 0x63; // Defines the 2nd AGC Threshold
 // RegAgcThresh3                0x64
-constexpr uint8_t RegAgcThresh3             = 0x64; // Defines the 3rd AGC Threshold
+constexpr uint8_t REGAGCTHRESH3             = 0x64; // Defines the 3rd AGC Threshold
 
 //RegPll                        0x70
-constexpr uint8_t RegPll                    = 0x70;
-constexpr uint8_t PllBandwidthMask          = 0b11000000;
-enum PllBandwidth
+constexpr uint8_t REGPLL                    = 0x70;
+constexpr uint8_t PLLBANDWIDTHMASK          = 0b11000000;
+enum class PllBandwidth
 {
     E_76KHZ,
     E_150KHZ,
@@ -405,14 +405,14 @@ enum PllBandwidth
 
 inline uint64_t getUnmasked(uint64_t mask, uint64_t value)
 {
-    for (; mask^1; mask = (mask>>1), value = (value>>1));
+    for (; !(mask&1); mask = (mask>>1), value = (value>>1));
     return mask&value;
 }
 
 inline uint64_t setMasked(uint64_t mask, uint64_t value)
 {
     auto omask = mask;
-    for (; mask^1; mask = (mask>>1), value = (value<<1));
+    for (; !(mask&1); mask = (mask>>1), value = (value<<1));
     return value&omask;
 }
 

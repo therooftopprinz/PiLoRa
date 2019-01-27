@@ -2,25 +2,33 @@
 #define __SX1278_HPP__
 
 #include <thread>
-#include "SX127x.hpp"
+#include <SX127x.hpp>
+#include <IHwApi.hpp>
+#include <condition_variable>
+#include <atomic>
 
-namespace flylora_sx1278
+namespace flylora_sx127x
 {
 
-class LoRa
+class SX1278
 {
 public:
     enum class Usage {TX, RXC};
 
-    LoRa(ISpi& pSpi, IGpio& pGpio, unsigned pResetPin, unsigned pDio1Pin, unsigned pDio2Pin)
+    SX1278(hwapi::ISpi& pSpi, hwapi::IGpio& pGpio, unsigned pResetPin, unsigned pDio1Pin, unsigned pDio2Pin)
         : mResetPin(pResetPin)
+        , mDio1Pin(pDio1Pin)
+        , mDio2Pin(pDio2Pin)
         , mSpi(pSpi)
         , mGpio(pGpio)
     {
-        mGpio.setMode(resetPin, PI_OUTPUT);
-        mGpio.setMode(dio1Pin, PI_INPUT);
-        mGpio.setMode(dio2Pin, PI_INPUT);
+        mGpio.setMode(pResetPin, hwapi::PinMode::OUTPUT);
+        mGpio.setMode(pDio1Pin,  hwapi::PinMode::INPUT);
+        mGpio.setMode(pDio2Pin,  hwapi::PinMode::INPUT);
         mGpio.set(mResetPin, 0);
+        mDio1CbId = mGpio.registerCallback(mDio1Pin, hwapi::Edge::RISING, [](uint32_t) {});
+        mDio2CbId = mGpio.registerCallback(mDio2Pin, hwapi::Edge::RISING, [](uint32_t) {});
+        setMode(Mode::STDBY);
     }
 
     void resetModule()
@@ -40,15 +48,15 @@ public:
 
     uint8_t getMode()
     {
-        uint8_t wro[2] = {RegOpMode, 0};
+        uint8_t wro[2] = {REGOPMODE, 0};
         uint8_t wri[2];
         mSpi.xfer(wro, wri, 2);
-        return getUnmasked(ModeMask, wri[2]);
+        return getUnmasked(MODEMASK, wri[2]);
     }
 
     void setRegister(uint8_t reg, uint8_t mask, uint8_t value)
     {
-        uint8_t wro[2] = {0x80|reg, 0};
+        uint8_t wro[2] = {uint8_t(0x80|reg), 0};
         uint8_t wri[2];
         mSpi.xfer(wro, wri, 2);
         value = setMasked(mask, value);
@@ -59,11 +67,11 @@ public:
         mSpi.xfer(wro, wri, 2);
     }
 
-    void setMode(uint8_t mode)
+    void setMode(Mode mode)
     {
-        uint8_t wro[2] = {0x80|RegOpMode, 0};
+        uint8_t wro[2] = {0x80|REGOPMODE, 0};
         uint8_t wri[2];
-        wro[1] = LongRangeModeMask | (isHf() ? 0 : LowFrequencyModeOnMask) | setMasked(ModeMask, mode);
+        wro[1] = LONGRANGEMODEMASK | LOWFREQUENCYMODEONMASK | setMasked(MODEMASK, uint8_t(mode));
         mSpi.xfer(wro, wri, 2);
     }
 
@@ -74,41 +82,43 @@ public:
 
         // TODO: DO SPURRIOUS OPTIMIZATION
 
+        // TODO: DO DetectionOptimize
+
         uint8_t wro[2];
         uint8_t wri[2];
 
-        wro[0] = 0x80 | RegFrLsb;
+        wro[0] = 0x80 | REGFRLSB;
         wro[1] = cf&0xFF;
         mSpi.xfer(wro, wri, 2);
 
-        wro[0] = 0x80 | RegFrMid;
+        wro[0] = 0x80 | REGFRMID;
         wro[1] = (cf>>8)&0xFF;
         mSpi.xfer(wro, wri, 2);
 
-        wro[0] = 0x80 | RegFrMsb;
+        wro[0] = 0x80 | REGFRMSB;
         wro[1] = (cf>>16)&0xFF;
         mSpi.xfer(wro, wri, 2);
 
         prepareUsageMode();
     }
 
-    uin32_t getCarrier()
+    uint32_t getCarrier()
     {
         uint32_t cf = 0;
 
         uint8_t wro[2] = {0, 0};
         uint8_t wri[2] = {0, 0};
 
-        wro[0] = RegFrLsb;
+        wro[0] = REGFRLSB;
         mSpi.xfer(wro, wri, 2);
         cf |= wri[1];
 
-        wro[0] = egFrMid;
+        wro[0] = REGFRMID;
         wro[1] = (cf>>8)&0xFF;
         mSpi.xfer(wro, wri, 2);
         cf |= wri[1]<<8;
 
-        wro[0] = RegFrMsb;
+        wro[0] = REGFRMSB;
         wro[1] = (cf>>16)&0xFF;
         mSpi.xfer(wro, wri, 2);
         cf |= wri[1]<<16;
@@ -121,57 +131,100 @@ public:
         // SET MODE STANDBY
         setMode(Mode::STDBY);
 
-        uint8_t config1 = setMasked(BwMask, pBandwidth) | setMasked(CodingRateMask, pCodingRate) | setMasked(CodingRImplicitHeaderModeOnMaskateMask, implicitHeader);
-        uint8_t config2 = setMasked(SpreadngFactorMask, pSpreadingFactor);
+        uint8_t config1 = setMasked(BWMASK, pBandwidth)
+                        | setMasked(CODINGRATEMASK, pCodingRate)
+                        | setMasked(IMPLICITHEADERMODEONMASK, implicitHeader);
+        uint8_t config2 = setMasked(SPREADNGFACTORMASK, pSpreadingFactor);
         uint8_t wro[2];
         uint8_t wri[2];
 
-        wro[0] = 0x80 | RegModemConfig1;
+        wro[0] = 0x80 | REGMODEMCONFIG1;
         wro[1] = config1;
         mSpi.xfer(wro, wri, 2);
 
-        wro[0] = 0x80 | RegModemConfig2;
+        wro[0] = 0x80 | REGMODEMCONFIG2;
         wro[1] = config2;
         mSpi.xfer(wro, wri, 2);
 
         prepareUsageMode();
     }
 
-    void setPaSelect(); // +14 dbm or +20 dbm
-    void setMaxPower();
-    void setOutputPower(); //
+    void setOutputPower(int8_t pPower)
+    {
+        // SET MODE STANDBY
+        setMode(Mode::STDBY);
 
-    void setLnaGain();
+        // 5.4.2.  RF Power Amplifiers
+        bool isPaBoost = false;
+        uint8_t power = pPower;
+        if (pPower>14)
+        {
+            isPaBoost = true;
+            power = pPower-2;
+        }
 
-    void getLastRssi();
+        uint8_t wro[2] = {uint8_t(0x80|REGPACONFIG),
+            uint8_t(setMasked(PASELECTMASK, isPaBoost)
+                  | setMasked(MAXPOWERMASK, 7)
+                  | setMasked(OUTPUTPOWERMASK, power))};
+        uint8_t wri[2];
 
-    void tx(); // transmit
-    void rx(); // receive
+        mSpi.xfer(wro, wri, 2);
+
+    }
+
+    void setLnaGain()
+    {
+        // RegModemConfig3
+
+    }
+
+    void getLastRssi()
+    {
+        // RegPktRssiValue
+    }
+
+    void tx(const uint8_t *pData, uint8_t pSize)
+    {
+        // 
+    }
+
+    uint8_t rx(uint8_t *pData, uint8_t pSize)
+    {
+        //
+        return 0;
+    }
 
 private:
-    void onRxDone();
-    void onTxDone();
+    void onDio1();
+    void onDio2();
     void prepareUsageMode()
     {
         if (Usage::RXC == mUsage)
         {
-            setMoode(Mode::RXCONTINUOUS);
+            setMode(Mode::RXCONTINUOUS);
         }
     }
 
-    bool isHf() {return mCarrier>500;} // TODO CHECK
+    std::condition_variable pTxDoneCv;
+    std::atomic<bool> pTxDone;
+    std::condition_variable pRxDoneCv;
+    std::atomic<bool> pRxDone;
 
     unsigned mResetPin;
-    unsigned Usage mUsage;
+    unsigned mDio1Pin;
+    unsigned mDio2Pin;
+    int mDio1CbId;
+    int mDio2CbId;
+    Usage mUsage;
 
     unsigned mCarrier = 433;
     unsigned mBandwidth;
     unsigned mSpreadingFactor;
-    unsigned m;
-    ISpi& mSpi;
-    IGpio& mGpio;
+    hwapi::ISpi& mSpi;
+    hwapi::IGpio& mGpio;
 };
 
-} // flylora_sx1278
+} // flylora_sx127x
 
-#endif __SX1278_HPP__
+#endif // __SX1278_HPP__

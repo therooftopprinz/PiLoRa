@@ -6,7 +6,7 @@ import subprocess
 CXX      = 'g++'
 AR       = 'ar'
 MAKE     = 'make'
-CXXFLAGS = '-std=c++14 -ggdb3 -O0 -Wall -Werror -I../gtest'
+CXXFLAGS = '-std=c++17 -ggdb3 -O0 -Wall -Werror -I../gtest'
 
 TLD = os.path.dirname(sys.argv[0])+'/'
 PWD = os.getcwd()+'/'
@@ -97,21 +97,22 @@ gtest.target_archive('gtest.a')
 
 src = Build()
 src.set_cxxflags(CXXFLAGS)
-src.add_include_paths(['src'])
-src.set_src_dir(TLD+'src')
+src.add_include_paths(['src/', 'HwApi/'])
+src.set_src_dir(TLD+'src/')
 src.add_src_files(SRC_SOURCES)
-src.set_linkflags('-lpthread')
 src.target_archive('src.a')
 
 test = Build()
 test.set_cxxflags(CXXFLAGS)
-test.add_include_paths(['gtest'])
-test.add_include_paths(['src'])
-test.set_src_dir(TLD+'test')
+test.add_include_paths(['gtest/', 'src/', 'HwApi/', 'test/',])
+test.set_src_dir(TLD+'test/')
 test.add_src_files(TEST_SOURCES)
 test.add_dependencies(['gtest.a', 'src.a'])
+test.set_linkflags("-lpthread")
+
 test.target_executable('test')
 
 with open('Makefile','w+') as mf:
+    mf.write(gtest.generate_make())
     mf.write(test.generate_make())
     mf.write(src.generate_make())
