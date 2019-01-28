@@ -233,7 +233,7 @@ enum class Bw
 
 enum class CodingRate
 {
-    CR_4V5,                      // 4/5
+    CR_4V5 = 1,                  // 4/5
     CR_4V6,                      // 4/6
     CR_4V7,                      // 4/7
     CR_4V8                       // 4/8

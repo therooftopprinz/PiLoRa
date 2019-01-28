@@ -32,7 +32,6 @@ struct SX1278Tests : Test
 {
     static constexpr uint8_t mResetPin = 1;
     static constexpr uint8_t mDio1Pin = 2;
-    static constexpr uint8_t mDio2Pin = 3;
 
     SX1278Tests()
     {
@@ -42,13 +41,13 @@ struct SX1278Tests : Test
     {
         EXPECT_CALL(mGpioMock, setMode(mResetPin, hwapi::PinMode::OUTPUT));
         EXPECT_CALL(mGpioMock, setMode(mDio1Pin, hwapi::PinMode::INPUT));
-        EXPECT_CALL(mGpioMock, setMode(mDio2Pin, hwapi::PinMode::INPUT));
         EXPECT_CALL(mGpioMock, set(mResetPin, 0)).Times(1).RetiresOnSaturation();
+        EXPECT_CALL(mGpioMock, registerCallback(mDio1Pin, hwapi::Edge::RISING, _));
 
         static uint8_t startMode[] = { uint8_t(0x80|REGOPMODE), uint8_t(LONGRANGEMODEMASK|LOWFREQUENCYMODEONMASK|uint8_t(Mode::STDBY))};
         EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startMode, 2), _, 2)).Times(1).RetiresOnSaturation();
 
-        mSut = std::make_unique<flylora_sx127x::SX1278>(mSpiMock, mGpioMock, mResetPin, mDio1Pin, mDio2Pin);
+        mSut = std::make_unique<flylora_sx127x::SX1278>(mSpiMock, mGpioMock, mResetPin, mDio1Pin);
     }
 
     void TearDown()
@@ -78,7 +77,6 @@ TEST(SX1278Utils, shouldSetUnmasked)
 TEST_F(SX1278Tests, should_ResetModule)
 {
     testing::InSequence dummy;
-
     EXPECT_CALL(mGpioMock, set(mResetPin, 1)).Times(1).RetiresOnSaturation();
     EXPECT_CALL(mGpioMock, set(mResetPin, 0)).Times(1).RetiresOnSaturation();
     mSut->resetModule();
