@@ -15,24 +15,23 @@ class SX1278
 public:
     enum class Usage {TX, RXC};
 
-    SX1278(hwapi::ISpi& pSpi, hwapi::IGpio& pGpio, unsigned pResetPin, unsigned pDio1Pin, unsigned pDio2Pin)
+    SX1278(hwapi::ISpi& pSpi, hwapi::IGpio& pGpio, unsigned pResetPin, unsigned pDio1Pin)
         : mResetPin(pResetPin)
         , mDio1Pin(pDio1Pin)
-        , mDio2Pin(pDio2Pin)
         , mSpi(pSpi)
         , mGpio(pGpio)
     {
         mGpio.setMode(pResetPin, hwapi::PinMode::OUTPUT);
         mGpio.setMode(pDio1Pin,  hwapi::PinMode::INPUT);
-        mGpio.setMode(pDio2Pin,  hwapi::PinMode::INPUT);
         mGpio.set(mResetPin, 0);
         mDio1CbId = mGpio.registerCallback(mDio1Pin, hwapi::Edge::RISING, [](uint32_t) {});
-        mDio2CbId = mGpio.registerCallback(mDio2Pin, hwapi::Edge::RISING, [](uint32_t) {});
+
         setMode(Mode::STDBY);
     }
 
     void resetModule()
     {
+        // TODO: Anotate specs
         using namespace std::chrono_literals;
         mGpio.set(mResetPin, 1);
         std::this_thread::sleep_for(100us);
@@ -43,6 +42,11 @@ public:
     void setUsage(Usage pUsage)
     {
         mUsage = pUsage;
+        // TODO: SET DIO MAPPING
+        // TODO: SET INTERRUPT MASK
+        // TODO: SetTxBase = 0
+        // TODO: SetRxBase = 0
+
         prepareUsageMode();
     }
 
@@ -170,7 +174,6 @@ public:
         uint8_t wri[2];
 
         mSpi.xfer(wro, wri, 2);
-
     }
 
     void setLnaGain()
@@ -186,18 +189,36 @@ public:
 
     void tx(const uint8_t *pData, uint8_t pSize)
     {
-        // 
+        // TODO: SetPayloadSize
+        // TODO: SetFifoPtr = 0
+        // TODO: SetFifoData
+        // TODO: SetModeCacheTx
+        // TODO: SetModeTx
+        // TODO: Wait TxDone
+        // TODO: SetModeCacheStby
     }
 
     uint8_t rx(uint8_t *pData, uint8_t pSize)
     {
-        //
+        // TODO: Pop Buffer
         return 0;
     }
 
 private:
-    void onDio1();
-    void onDio2();
+    void onDio1()
+    {
+        if (Mode::RXCONTINUOUS)
+        {
+            // TODO: SetFifoPtr = 0
+            // TODO: GetFifoData(RxByte+RxSize) and push to buffer
+            // TODO: RxByte = 0
+        }
+        else
+        {
+            // TODO: Notify TxDone
+        }
+    }
+
     void prepareUsageMode()
     {
         if (Usage::RXC == mUsage)
@@ -213,10 +234,10 @@ private:
 
     unsigned mResetPin;
     unsigned mDio1Pin;
-    unsigned mDio2Pin;
     int mDio1CbId;
-    int mDio2CbId;
     Usage mUsage;
+
+    // TODO: CACHE CURRENT MODE
 
     unsigned mCarrier = 433;
     unsigned mBandwidth;

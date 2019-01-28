@@ -84,7 +84,7 @@ struct ReconfigurationRequest
     uint8_t rxGain;
 };
 
-struct ReconfigurationComplete
+struct ReconfigurationResponse
 {
     Header hdr;
     uint8_t status;

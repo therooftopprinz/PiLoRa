@@ -77,9 +77,14 @@ TEST(SX1278Utils, shouldSetUnmasked)
 
 TEST_F(SX1278Tests, should_ResetModule)
 {
-    testing::InSequence dummy;   
+    testing::InSequence dummy;
 
     EXPECT_CALL(mGpioMock, set(mResetPin, 1)).Times(1).RetiresOnSaturation();
     EXPECT_CALL(mGpioMock, set(mResetPin, 0)).Times(1).RetiresOnSaturation();
     mSut->resetModule();
+}
+
+TEST(SX1278, should_)
+{
+    //
 }
