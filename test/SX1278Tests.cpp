@@ -43,16 +43,43 @@ struct SX1278Tests : Test
         EXPECT_CALL(mGpioMock, setMode(mDio1Pin, hwapi::PinMode::INPUT));
         EXPECT_CALL(mGpioMock, set(mResetPin, 0)).Times(1).RetiresOnSaturation();
         EXPECT_CALL(mGpioMock, registerCallback(mDio1Pin, hwapi::Edge::RISING, _));
+        EXPECT_CALL(mGpioMock, deregisterCallback(_));
 
-        static uint8_t startMode[] = { uint8_t(0x80|REGOPMODE), uint8_t(LONGRANGEMODEMASK|LOWFREQUENCYMODEONMASK|uint8_t(Mode::STDBY))};
-        EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startMode, 2), _, 2)).Times(1).RetiresOnSaturation();
+        expectInit();
 
         mSut = std::make_unique<flylora_sx127x::SX1278>(mSpiMock, mGpioMock, mResetPin, mDio1Pin);
     }
 
+    void expectInit()
+    {
+        // TODO: don't use the enum
+        auto LONGRANGEMODEMASK      = flylora_sx127x::LONGRANGEMODEMASK;
+        auto LOWFREQUENCYMODEONMASK = flylora_sx127x::LOWFREQUENCYMODEONMASK;
+        auto STDBY                  = Mode::STDBY;
+        auto REGOPMODE              = flylora_sx127x::REGOPMODE;
+        auto REGIRQFLAGSMASKMASK    = flylora_sx127x::REGIRQFLAGSMASKMASK;
+        auto REGFIFOTXBASEADD       = flylora_sx127x::REGFIFOTXBASEADD;
+        auto REGFIFORXBASEADD       = flylora_sx127x::REGFIFORXBASEADD;
+
+        // REGOPMODE
+        static uint8_t startMode[] = { uint8_t(0x80|REGOPMODE), uint8_t(LONGRANGEMODEMASK|LOWFREQUENCYMODEONMASK|uint8_t(STDBY))};
+        EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startMode, 2), _, 2)).Times(1).RetiresOnSaturation();
+
+        // REGIRQFLAGSMASKMASK
+        static uint8_t startIrqFlag[] = { uint8_t(0x80|REGIRQFLAGSMASKMASK), uint8_t(TXDONEMASKMASK | RXDONEMASKMASK) };
+        EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startIrqFlag, 2), _, 2)).Times(1).RetiresOnSaturation();
+
+        // REGFIFOTXBASEADD
+        static uint8_t startFifoTxBaseAddr[] = { uint8_t(0x80|REGFIFOTXBASEADD), 0 };
+        EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startFifoTxBaseAddr, 2), _, 2)).Times(1).RetiresOnSaturation();
+
+        // REGFIFORXBASEADD
+        static uint8_t startFifoRxBaseAddr[] = { uint8_t(0x80|REGFIFORXBASEADD), 0 };
+        EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startFifoRxBaseAddr, 2), _, 2)).Times(1).RetiresOnSaturation();
+    }
+
     void TearDown()
     {
-
     }
 
     SpiMock mSpiMock;
@@ -79,6 +106,9 @@ TEST_F(SX1278Tests, should_ResetModule)
     testing::InSequence dummy;
     EXPECT_CALL(mGpioMock, set(mResetPin, 1)).Times(1).RetiresOnSaturation();
     EXPECT_CALL(mGpioMock, set(mResetPin, 0)).Times(1).RetiresOnSaturation();
+
+    expectInit();
+
     mSut->resetModule();
 }
 

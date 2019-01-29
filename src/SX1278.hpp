@@ -6,6 +6,8 @@
 #include <IHwApi.hpp>
 #include <condition_variable>
 #include <atomic>
+#include <cstring>
+#include <deque>
 
 namespace flylora_sx127x
 {
@@ -25,7 +27,12 @@ public:
         mGpio.setMode(pDio1Pin,  hwapi::PinMode::INPUT);
         mGpio.set(mResetPin, 0);
         mDio1CbId = mGpio.registerCallback(mDio1Pin, hwapi::Edge::RISING, [](uint32_t) {});
-        setMode(Mode::STDBY);
+        init();
+    }
+
+    ~SX1278()
+    {
+        mGpio.deregisterCallback(mDio1CbId);
     }
 
     void resetModule()
@@ -36,27 +43,12 @@ public:
         std::this_thread::sleep_for(100us);
         mGpio.set(mResetPin, 0);
         std::this_thread::sleep_for(5ms);
-    }
-
-    void setRegister(uint8_t pReg, uint8_t val)
-    {
-        uint8_t wro[2] = {uint8_t(0x80|pReg), val};
-        uint8_t wri[2];
-        mSpi.xfer(wro, wri, 2);
-    }
-
-    uint8_t getRegister(uint8_t pReg)
-    {
-        uint8_t wro[2] = {pReg, 0};
-        uint8_t wri[2];
-        mSpi.xfer(wro, wri, 2);
-        return wri[1];
+        init();
     }
 
     void setUsage(Usage pUsage)
     {
         mUsage = pUsage;
-
         // 4.1.6.1.  Digital IO Pin Mapping - SX1276/77/78/79 DATASHEET
         DioMapping1 dioMapping = DioMapping1::CadDone_FhssChangeChannel_RxTimeout_RxDone;
         if (Usage::TX == mUsage)
@@ -64,45 +56,13 @@ public:
             dioMapping = DioMapping1::ValidHeader_FhssChangeChannel_FhssChangeChannel_TxDone;
         }
 
-        // 4.1.2.4.  Interrupts in LoRa Mode - SX1276/77/78/79 DATASHEET
-        // 4.1.6.    LoRaTM Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
-
-        uint8_t interruptMask = TXDONEMASKMASK | RXDONEMASKMASK;
-
-        // 4.1.2.3.  LoRaTM Mode FIFO Data Buffer - SX1276/77/78/79 DATASHEET
         setRegister(REGDIOMAPPING1, uint8_t(dioMapping));
-        setRegister(REGIRQFLAGSMASKMASK, interruptMask);
-        setRegister(REGFIFOTXBASEADD, 0);
-        setRegister(REGFIFORXBASEADD, 0);
-    }
-
-    uint8_t getMode()
-    {
-        return getUnmasked(MODEMASK, getRegister(REGOPMODE));
-    }
-
-    // void setRegister(uint8_t reg, uint8_t mask, uint8_t value)
-    // {
-    //     uint8_t wro[2] = {uint8_t(0x80|reg), 0};
-    //     uint8_t wri[2];
-    //     mSpi.xfer(wro, wri, 2);
-    //     value = setMasked(mask, value);
-    //     wro[0] |= 0x80;
-    //     wro[1] = (wri[1] & (~mask)) | value;
-    //     wri[0] = 0;
-    //     wri[1] = 0;
-    //     mSpi.xfer(wro, wri, 2);
-    // }
-
-    void setMode(Mode mode)
-    {
-        setRegister(REGOPMODE, LONGRANGEMODEMASK | LOWFREQUENCYMODEONMASK | setMasked(MODEMASK, uint8_t(mode)));
     }
 
     void setCarrier(uint32_t cf)
     {
         // 4.1.4.  Frequency Settings - SX1276/77/78/79 DATASHEET
-        // 6.4.    LoRaTM Mode Register Map - SX1276/77/78/79 DATASHEET
+        // 6.4.    LoRa Mode Register Map - SX1276/77/78/79 DATASHEET
 
         // TODO: DO SPURRIOUS OPTIMIZATION - SX1276/77/78 Errata fixes
         // TODO: DO DetectionOptimize - SX1276/77/78 Errata fixes
@@ -115,7 +75,7 @@ public:
     uint32_t getCarrier()
     {
         // 4.1.4.  Frequency Settings - SX1276/77/78/79 DATASHEET
-        // 6.4.    LoRaTM Mode Register Map - SX1276/77/78/79 DATASHEET
+        // 6.4.    LoRa Mode Register Map - SX1276/77/78/79 DATASHEET
         uint32_t cf = 0;
         cf |= getRegister(REGFRLSB);
         cf |= getRegister(REGFRMID)<<8;
@@ -125,9 +85,8 @@ public:
 
     void configureModem(Bw pBandwidth, CodingRate pCodingRate, bool implicitHeader, SpreadngFactor pSpreadingFactor)
     {
-
-        // 4.1.1. Link Design Using the LoRaTM Modem - SX1276/77/78/79 DATASHEET
-        // 6.4.   LoRaTM Mode Register Map - SX1276/77/78/79 DATASHEET
+        // 4.1.1. Link Design Using the LoRa Modem - SX1276/77/78/79 DATASHEET
+        // 6.4.   LoRa Mode Register Map - SX1276/77/78/79 DATASHEET
 
         if (SpreadngFactor::SF_6 == pSpreadingFactor)
         {
@@ -156,32 +115,74 @@ public:
             power = pPower-2;
         }
 
-        setRegister(REGPACONFIG,
-                    uint8_t(setMasked(PASELECTMASK, isPaBoost)
-                  | setMasked(MAXPOWERMASK, 7)
-                  | setMasked(OUTPUTPOWERMASK, power)));
+        uint8_t paConfig = uint8_t(
+                    setMasked(PASELECTMASK, isPaBoost) |
+                    setMasked(MAXPOWERMASK, 7) |
+                    setMasked(OUTPUTPOWERMASK, power));
+
+        setRegister(REGPACONFIG, paConfig);
     }
 
-    void getLastRssi()
+    int getLastRssi()
     {
-        // RegPktRssiValue
+        // 5.5.5.  RSSI and SNR in LoRa Mode - SX1276/77/78/79 DATASHEET
+        return -164+getRegister(REGPKTRSSIVALUE);
     }
 
-    void tx(const uint8_t *pData, uint8_t pSize)
+    int tx(const uint8_t *pData, uint8_t pSize)
     {
-        // TODO: SetPayloadSize
-        // TODO: SetFifoPtr = 0
-        // TODO: SetFifoData
-        // TODO: SetModeCacheTx
-        // TODO: SetModeTx
-        // TODO: Wait TxDone
-        // TODO: SetModeCacheStby
+        if (Usage::TX != mUsage || pSize>=256)
+        {
+            return -1;
+        }
+
+        // 4.1.6.  LoRaTM Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
+        // TODO: ANNOTATE SPECS
+        setRegister(REGPAYLOADLENGTH, pSize);
+        setRegister(REGFIFOADDRPTR, 0);
+
+        uint8_t wro[257];
+        uint8_t wri[257];
+
+        wro[0] = 0x80|REGFIFO;
+        std::memcpy(wro+1, pData, pSize);
+        mSpi.xfer(wro, wri, 1+pSize);
+
+        setMode(Mode::TX);
+
+        {
+            using namespace std::chrono_literals;
+            std::unique_lock<std::mutex> lock(pTxDoneMutex);
+            pTxDoneCv.wait_for(lock, 1s, [this]{return pTxDone;});
+            pTxDone = false;
+        }
     }
 
     uint8_t rx(uint8_t *pData, uint8_t pSize)
     {
-        // TODO: Pop Buffer
-        return 0;
+        std::unique_lock<std::mutex> lock(bufferQueueMutex);
+
+        if (!bufferQueue.size())
+        {
+            // TODO: Configurable RX TIMEOUT
+            using namespace std::chrono_literals;
+            pTxDoneCv.wait_for(lock, 5s, [this]{return bufferQueue.size();});
+        }
+
+        if (bufferQueue.size())
+        {
+            return -1;
+        }
+
+        auto sz = bufferQueue.front().size();
+        if (sz>pSize)
+        {
+            return -1;
+        }
+
+        std::memcpy(pData, bufferQueue.front().data(), sz);
+        bufferQueue.pop_front();
+        return pSize;
     }
 
 private:
@@ -189,31 +190,86 @@ private:
     {
         if (Usage::RXC == mUsage)
         {
-            // TODO: SetFifoPtr = 0
+            // TODO: ANNOTATE SPECS
+            setRegister(REGFIFOADDRPTR, 0);
             // TODO: GetFifoData(RxByte+RxSize) and push to buffer
-            // TODO: RxByte = 0
+            uint8_t rcvSz = getRegister(REGRXNBBYTES) + getRegister(REGFIFORXBYTEADDR);
+            uint8_t wro[257];
+            uint8_t wri[257];
+            wro[1] = REGFIFO;
+            mSpi.xfer(wro, wri, 1+rcvSz);
+
+            std::vector<uint8_t> pvect(rcvSz);
+            std::memcpy(pvect.data(), wri+1, rcvSz);
+
+            {
+                std::unique_lock<std::mutex> lock(bufferQueueMutex);
+                bufferQueue.push_back(std::move(pvect));
+            }
+
+            bufferQueueCv.notify_one();
         }
         else
         {
-            // TODO: Notify TxDone
+            {
+                std::unique_lock<std::mutex> lock(pTxDoneMutex);
+                pTxDone = true;
+            }
+            pTxDoneCv.notify_one();
         }
     }
 
+    uint8_t getMode()
+    {
+        return getUnmasked(MODEMASK, getRegister(REGOPMODE));
+    }
+
+    void setMode(Mode mode)
+    {
+        setRegister(REGOPMODE, LONGRANGEMODEMASK | LOWFREQUENCYMODEONMASK | setMasked(MODEMASK, uint8_t(mode)));
+    }
+
+    void init()
+    {
+        setMode(Mode::STDBY);
+
+        // 4.1.2.4.  Interrupts in LoRa Mode - SX1276/77/78/79 DATASHEET
+        uint8_t interruptMask = TXDONEMASKMASK | RXDONEMASKMASK;
+        setRegister(REGIRQFLAGSMASKMASK, interruptMask);
+        // 4.1.2.3.  LoRa Mode FIFO Data Buffer - SX1276/77/78/79 DATASHEET
+        // 4.1.6.    LoRa Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
+        setRegister(REGFIFOTXBASEADD, 0);
+        setRegister(REGFIFORXBASEADD, 0);
+    }
+
+    void setRegister(uint8_t pReg, uint8_t val)
+    {
+        uint8_t wro[2] = {uint8_t(0x80|pReg), val};
+        uint8_t wri[2];
+        mSpi.xfer(wro, wri, 2);
+    }
+
+    uint8_t getRegister(uint8_t pReg)
+    {
+        uint8_t wro[2] = {pReg, 0};
+        uint8_t wri[2];
+        mSpi.xfer(wro, wri, 2);
+        return wri[1];
+    }
+
+    std::condition_variable bufferQueueCv;
+    std::mutex bufferQueueMutex;
+    std::deque<std::vector<uint8_t>> bufferQueue;
+
     std::condition_variable pTxDoneCv{};
-    std::atomic<bool> pTxDone{};
-    std::condition_variable pRxDoneCv{};
-    std::atomic<bool> pRxDone{};
+    std::mutex pTxDoneMutex;
+    bool pTxDone{};
 
     unsigned mResetPin{};
     unsigned mDio1Pin{};
     int mDio1CbId{};
     Usage mUsage{};
 
-    // TODO: CACHE CURRENT MODE
-
-    unsigned mCarrier = 433;
-    Bw mBandwidth{};
-    SpreadngFactor mSpreadingFactor{};
     hwapi::ISpi& mSpi;
     hwapi::IGpio& mGpio;
 };

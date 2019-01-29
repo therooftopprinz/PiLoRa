@@ -276,7 +276,7 @@ constexpr uint8_t REGMAXPAYLOADLENGTH       = 0x23; // Max Payload Length
 // RegHopPeriod                 0x24
 constexpr uint8_t REGHOPPERIOD              = 0x24; // Frequency Hopping Period
 // RegFifoRxByteAddr            0x25
-constexpr uint8_t REGFIFORXBYTEADDR         = 0x25; // Current value of RX databuffer pointe
+constexpr uint8_t REGFIFORXBYTEADDR         = 0x25; // Current value of RX data buffer pointe
 
 
 // RegModemConfig3              0x26
