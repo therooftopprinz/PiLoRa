@@ -15,7 +15,7 @@ namespace flylora_sx127x
 class SX1278
 {
 public:
-    enum class Usage {TX, RXC};
+    enum class Usage {UNSPEC, TX , RXC};
 
     SX1278(hwapi::ISpi& pSpi, hwapi::IGpio& pGpio, unsigned pResetPin, unsigned pDio1Pin)
         : mResetPin(pResetPin)
@@ -55,7 +55,6 @@ public:
         {
             dioMapping = DioMapping1::ValidHeader_FhssChangeChannel_FhssChangeChannel_TxDone;
         }
-
         setRegister(REGDIOMAPPING1, uint8_t(dioMapping));
     }
 
@@ -123,6 +122,21 @@ public:
         setRegister(REGPACONFIG, paConfig);
     }
 
+    void standby()
+    {
+        setMode(Mode::STDBY);
+    }
+
+    void start()
+    {
+        if (Usage::RXC == mUsage)
+        {
+            setMode(Mode::RXCONTINUOUS);
+            return;
+        }
+        standby();
+    }
+
     int getLastRssi()
     {
         // 5.5.5.  RSSI and SNR in LoRa Mode - SX1276/77/78/79 DATASHEET
@@ -186,6 +200,45 @@ public:
     }
 
 private:
+
+    void setRegister(uint8_t pReg, uint8_t val)
+    {
+        uint8_t wro[2] = {uint8_t(0x80|pReg), val};
+        uint8_t wri[2];
+        mSpi.xfer(wro, wri, 2);
+    }
+
+    uint8_t getRegister(uint8_t pReg)
+    {
+        uint8_t wro[2] = {pReg, 0};
+        uint8_t wri[2];
+        mSpi.xfer(wro, wri, 2);
+        return wri[1];
+    }
+
+    uint8_t getMode()
+    {
+        return getUnmasked(MODEMASK, getRegister(REGOPMODE));
+    }
+
+    void setMode(Mode mode)
+    {
+        setRegister(REGOPMODE, LONGRANGEMODEMASK | LOWFREQUENCYMODEONMASK | setMasked(MODEMASK, uint8_t(mode)));
+    }
+
+    void init()
+    {
+        mUsage = Usage::UNSPEC;
+        standby();
+        // 4.1.2.4.  Interrupts in LoRa Mode - SX1276/77/78/79 DATASHEET
+        uint8_t interruptMask = TXDONEMASKMASK | RXDONEMASKMASK;
+        setRegister(REGIRQFLAGSMASK, interruptMask);
+        // 4.1.2.3.  LoRa Mode FIFO Data Buffer - SX1276/77/78/79 DATASHEET
+        // 4.1.6.    LoRa Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
+        setRegister(REGFIFOTXBASEADD, 0);
+        setRegister(REGFIFORXBASEADD, 0);
+    }
+
     void onDio1()
     {
         if (Usage::RXC == mUsage)
@@ -217,44 +270,6 @@ private:
             }
             pTxDoneCv.notify_one();
         }
-    }
-
-    uint8_t getMode()
-    {
-        return getUnmasked(MODEMASK, getRegister(REGOPMODE));
-    }
-
-    void setMode(Mode mode)
-    {
-        setRegister(REGOPMODE, LONGRANGEMODEMASK | LOWFREQUENCYMODEONMASK | setMasked(MODEMASK, uint8_t(mode)));
-    }
-
-    void init()
-    {
-        setMode(Mode::STDBY);
-
-        // 4.1.2.4.  Interrupts in LoRa Mode - SX1276/77/78/79 DATASHEET
-        uint8_t interruptMask = TXDONEMASKMASK | RXDONEMASKMASK;
-        setRegister(REGIRQFLAGSMASKMASK, interruptMask);
-        // 4.1.2.3.  LoRa Mode FIFO Data Buffer - SX1276/77/78/79 DATASHEET
-        // 4.1.6.    LoRa Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
-        setRegister(REGFIFOTXBASEADD, 0);
-        setRegister(REGFIFORXBASEADD, 0);
-    }
-
-    void setRegister(uint8_t pReg, uint8_t val)
-    {
-        uint8_t wro[2] = {uint8_t(0x80|pReg), val};
-        uint8_t wri[2];
-        mSpi.xfer(wro, wri, 2);
-    }
-
-    uint8_t getRegister(uint8_t pReg)
-    {
-        uint8_t wro[2] = {pReg, 0};
-        uint8_t wri[2];
-        mSpi.xfer(wro, wri, 2);
-        return wri[1];
     }
 
     std::condition_variable bufferQueueCv;

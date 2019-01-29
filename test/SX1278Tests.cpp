@@ -53,16 +53,16 @@ struct SX1278Tests : Test
     void expectInit()
     {
         // TODO: don't use the enum
-        auto LONGRANGEMODEMASK      = flylora_sx127x::LONGRANGEMODEMASK;
-        auto LOWFREQUENCYMODEONMASK = flylora_sx127x::LOWFREQUENCYMODEONMASK;
-        auto STDBY                  = Mode::STDBY;
-        auto REGOPMODE              = flylora_sx127x::REGOPMODE;
-        auto REGIRQFLAGSMASKMASK    = flylora_sx127x::REGIRQFLAGSMASKMASK;
-        auto REGFIFOTXBASEADD       = flylora_sx127x::REGFIFOTXBASEADD;
-        auto REGFIFORXBASEADD       = flylora_sx127x::REGFIFORXBASEADD;
+        constexpr auto LONGRANGEMODEMASK      = 0b10000000;
+        constexpr auto LOWFREQUENCYMODEONMASK = 0b00001000;
+        constexpr auto STDBY                  = 1;
+        constexpr auto REGOPMODE              = 1;
+        constexpr auto REGIRQFLAGSMASKMASK    = 0x11;
+        constexpr auto REGFIFOTXBASEADD       = 0x0E;
+        constexpr auto REGFIFORXBASEADD       = 0x0F;
 
         // REGOPMODE
-        static uint8_t startMode[] = { uint8_t(0x80|REGOPMODE), uint8_t(LONGRANGEMODEMASK|LOWFREQUENCYMODEONMASK|uint8_t(STDBY))};
+        static uint8_t startMode[] = { uint8_t(0x80|REGOPMODE), uint8_t(LONGRANGEMODEMASK|LOWFREQUENCYMODEONMASK|STDBY)};
         EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startMode, 2), _, 2)).Times(1).RetiresOnSaturation();
 
         // REGIRQFLAGSMASKMASK
@@ -101,7 +101,7 @@ TEST(SX1278Utils, shouldSetUnmasked)
     EXPECT_EQ(0b01101000u, setMasked(0b01111000, 0b1101));
 }
 
-TEST_F(SX1278Tests, should_ResetModule)
+TEST_F(SX1278Tests, shouldResetModule)
 {
     testing::InSequence dummy;
     EXPECT_CALL(mGpioMock, set(mResetPin, 1)).Times(1).RetiresOnSaturation();
@@ -112,7 +112,32 @@ TEST_F(SX1278Tests, should_ResetModule)
     mSut->resetModule();
 }
 
-TEST(SX1278, should_)
+TEST_F(SX1278Tests, shouldStandby)
 {
-    //
+    constexpr auto LONGRANGEMODEMASK      = 0b10000000;
+    constexpr auto LOWFREQUENCYMODEONMASK = 0b00001000;
+    constexpr auto STDBY                  = 1;
+    constexpr auto REGOPMODE              = 1;
+
+    uint8_t startMode[] = { uint8_t(0x80|REGOPMODE), uint8_t(LONGRANGEMODEMASK|LOWFREQUENCYMODEONMASK|STDBY)};
+    EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startMode, 2), _, 2)).Times(1).RetiresOnSaturation();
+    mSut->standby();
+}
+
+TEST_F(SX1278Tests, shouldSetUsageRx)
+{
+    constexpr auto REGDIOMAPPING1 = 0x40;
+    constexpr auto DIO1RXDONE = 0;
+    uint8_t dio1mapping[] = { uint8_t(0x80|REGDIOMAPPING1), DIO1RXDONE};
+    EXPECT_CALL(mSpiMock,  xfer(isBufferEq(dio1mapping, 2), _, 2)).Times(1).RetiresOnSaturation();
+    mSut->setUsage(SX1278::Usage::RXC);
+}
+
+TEST_F(SX1278Tests, shouldSetUsageTx)
+{
+    constexpr auto REGDIOMAPPING1 = 0x40;
+    constexpr auto DIO1TXDONE = 1;
+    uint8_t dio1mapping[] = { uint8_t(0x80|REGDIOMAPPING1), DIO1TXDONE};
+    EXPECT_CALL(mSpiMock,  xfer(isBufferEq(dio1mapping, 2), _, 2)).Times(1).RetiresOnSaturation();
+    mSut->setUsage(SX1278::Usage::TX);
 }

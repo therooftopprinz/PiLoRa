@@ -136,7 +136,7 @@ constexpr uint8_t REGFIFORXBASEADD          = 0x0F; // Read base address in FIFO
 constexpr uint8_t REGFIFORXCURRENTADDR      = 0x10; // Start address (in data buffer) of last packet received
 
 // RegIrqFlagsMaskMask          0x11
-constexpr uint8_t REGIRQFLAGSMASKMASK       = 0x11;
+constexpr uint8_t REGIRQFLAGSMASK           = 0x11;
 constexpr uint8_t RXTIMEOUTMASKMASK         = 0b10000000; // Timeout interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
 constexpr uint8_t RXDONEMASKMASK            = 0b01000000; // Packet reception complete interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
 constexpr uint8_t PAYLOADCRCERRORMASKMASK   = 0b00100000; // Payload CRC error interrupt mask: setting this bit masks the corresponding IRQ in RegIrqFlags
