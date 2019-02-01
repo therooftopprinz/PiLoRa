@@ -76,16 +76,20 @@ print 'PWD is ' + PWD
 
 TEST_SOURCES = []
 SRC_SOURCES  = []
+STUB_SOURCES  = []
 
-p = subprocess.Popen('cd '+TLD+'test && find .             | egrep \'\.cpp$\'', shell=True, stdout=subprocess.PIPE)
-q = subprocess.Popen('cd '+TLD+'src  && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
+p = subprocess.Popen('cd '+TLD+'test       && find .             | egrep \'\.cpp$\'', shell=True, stdout=subprocess.PIPE)
+q = subprocess.Popen('cd '+TLD+'src        && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
+r = subprocess.Popen('cd '+TLD+'HwApiStub  && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
 
 TEST_SOURCES = clean_filenames(p.stdout.readlines())
 SRC_SOURCES  = clean_filenames(q.stdout.readlines())
+STUB_SOURCES  = clean_filenames(q.stdout.readlines())
 
 
 print "TEST_SOURCES", TEST_SOURCES
 print "SRC_SOURCES", SRC_SOURCES
+print "SRC_SOURCES", STUB_SOURCES
 
 
 gtest = Build()
@@ -102,6 +106,13 @@ src.set_src_dir(TLD+'src/')
 src.add_src_files(SRC_SOURCES)
 src.target_archive('src.a')
 
+hwapistub = Build()
+hwapistub.set_cxxflags(CXXFLAGS)
+hwapistub.add_include_paths(['HwApiStub', 'HwApi/'])
+hwapistub.set_src_dir(TLD+'HwApiStub/')
+hwapistub.add_src_files(STUB_SOURCES)
+hwapistub.target_archive('stub.a')
+
 test = Build()
 test.set_cxxflags(CXXFLAGS)
 test.add_include_paths(['gtest/', 'src/', 'HwApi/', 'test/',])
@@ -109,10 +120,20 @@ test.set_src_dir(TLD+'test/')
 test.add_src_files(TEST_SOURCES)
 test.add_dependencies(['gtest.a', 'src.a'])
 test.set_linkflags("-lpthread")
-
 test.target_executable('test')
+
+binstub = Build()
+binstub.set_cxxflags(CXXFLAGS)
+binstub.add_include_paths(['gtest/', 'src/', 'HwApi/', 'HwApiStub/',])
+binstub.set_src_dir(TLD+'src/')
+binstub.add_src_files(["main.cpp"])
+binstub.add_dependencies(['stub.a', 'src.a'])
+binstub.set_linkflags("-lpthread")
+binstub.target_executable('binstub')
 
 with open('Makefile','w+') as mf:
     mf.write(gtest.generate_make())
     mf.write(test.generate_make())
     mf.write(src.generate_make())
+    mf.write(hwapistub.generate_make())
+    mf.write(binstub.generate_make())

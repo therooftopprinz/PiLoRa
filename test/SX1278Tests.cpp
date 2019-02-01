@@ -25,6 +25,7 @@ MATCHER_P2(isBufferEq, buffer, sz, "")
 {
     // printHex(arg, sz);
     // printHex(buffer, sz);
+    // std::cout << "\n";
     return std::memcmp(arg, buffer, sz) == 0;
 }
 
@@ -140,4 +141,26 @@ TEST_F(SX1278Tests, shouldSetUsageTx)
     uint8_t dio1mapping[] = { uint8_t(0x80|REGDIOMAPPING1), DIO1TXDONE};
     EXPECT_CALL(mSpiMock,  xfer(isBufferEq(dio1mapping, 2), _, 2)).Times(1).RetiresOnSaturation();
     mSut->setUsage(SX1278::Usage::TX);
+}
+
+TEST_F(SX1278Tests, shouldSetCarrier)
+{
+    constexpr auto REGFRLSB = 8;
+    constexpr auto REGFRMID = 7;
+    constexpr auto REGFRMSB = 6;
+    constexpr auto FOSC = 32000000ul;
+
+    constexpr auto carrier = 434000000ul;
+    constexpr auto frf = (carrier*524288ul)/FOSC;
+
+    uint8_t frfLsb[] = { uint8_t(0x80|REGFRLSB), uint8_t(frf&0xFF) };
+    uint8_t frfMid[] = { uint8_t(0x80|REGFRMID), uint8_t(frf>>8&0xFF) };
+    uint8_t frfMsb[] = { uint8_t(0x80|REGFRMSB), uint8_t(frf>>16&0xFF) };
+
+    testing::InSequence dummy;
+    EXPECT_CALL(mSpiMock,  xfer(isBufferEq(frfLsb, 2), _, 2)).Times(1).RetiresOnSaturation();
+    EXPECT_CALL(mSpiMock,  xfer(isBufferEq(frfMid, 2), _, 2)).Times(1).RetiresOnSaturation();
+    EXPECT_CALL(mSpiMock,  xfer(isBufferEq(frfMsb, 2), _, 2)).Times(1).RetiresOnSaturation();
+
+    mSut->setCarrier(carrier);
 }

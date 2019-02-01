@@ -58,17 +58,17 @@ public:
         setRegister(REGDIOMAPPING1, uint8_t(dioMapping));
     }
 
-    void setCarrier(uint32_t cf)
+    void setCarrier(uint32_t pCf)
     {
         // 4.1.4.  Frequency Settings - SX1276/77/78/79 DATASHEET
         // 6.4.    LoRa Mode Register Map - SX1276/77/78/79 DATASHEET
-
         // TODO: DO SPURRIOUS OPTIMIZATION - SX1276/77/78 Errata fixes
         // TODO: DO DetectionOptimize - SX1276/77/78 Errata fixes
+        pCf = (pCf*524288ul)/mFosc;
 
-        setRegister(REGFRLSB, cf&0xFF);
-        setRegister(REGFRMID, (cf>>8)&0xFF);
-        setRegister(REGFRMSB, (cf>>16)&0xFF);
+        setRegister(REGFRLSB, pCf&0xFF);
+        setRegister(REGFRMID, (pCf>>8)&0xFF);
+        setRegister(REGFRMSB, (pCf>>16)&0xFF);
     }
 
     uint32_t getCarrier()
@@ -79,14 +79,13 @@ public:
         cf |= getRegister(REGFRLSB);
         cf |= getRegister(REGFRMID)<<8;
         cf |= getRegister(REGFRMSB)<<16;
-        return cf;
+        return (mFosc*cf)/524288;
     }
 
     void configureModem(Bw pBandwidth, CodingRate pCodingRate, bool implicitHeader, SpreadngFactor pSpreadingFactor)
     {
         // 4.1.1. Link Design Using the LoRa Modem - SX1276/77/78/79 DATASHEET
         // 6.4.   LoRa Mode Register Map - SX1276/77/78/79 DATASHEET
-
         if (SpreadngFactor::SF_6 == pSpreadingFactor)
         {
             implicitHeader = true;
@@ -172,7 +171,7 @@ public:
         }
     }
 
-    uint8_t rx(uint8_t *pData, uint8_t pSize)
+    std::vector<uint8_t> rx()
     {
         std::unique_lock<std::mutex> lock(bufferQueueMutex);
 
@@ -185,18 +184,12 @@ public:
 
         if (bufferQueue.size())
         {
-            return -1;
+            return {};
         }
 
-        auto sz = bufferQueue.front().size();
-        if (sz>pSize)
-        {
-            return -1;
-        }
-
-        std::memcpy(pData, bufferQueue.front().data(), sz);
+        std::vector<uint8_t> rv = std::move(bufferQueue.front());
         bufferQueue.pop_front();
-        return pSize;
+        return rv;
     }
 
 private:
@@ -280,6 +273,8 @@ private:
     std::mutex pTxDoneMutex;
     bool pTxDone{};
 
+
+    uint32_t mFosc = 32000000ul;
     unsigned mResetPin{};
     unsigned mDio1Pin{};
     int mDio1CbId{};

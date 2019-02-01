@@ -81,3 +81,30 @@ struct ReconfigurationResponse
 };
 
 ```
+
+Building:
+```
+# Generating Makefile:
+mkdir build
+cd build
+../configure.py
+
+# Building test
+cd build
+make test
+
+# Building stubbed target
+cd build
+make binstub
+
+# Building pigpio target
+cd build
+make binpigpio
+```
+
+Stubbed Target:
+PiLoRa can still be tested without Raspberry Pi using the stubbed target.
+Stubbed target will open udp socket at 0.0.0.0:8888 for rx and will send upd packet to localhost:8881 for tx
+
+Pigpio Target:
+PiLoRa is linked with pigpio. PiLoRa will use the SPI and GPIO in pigpio.
