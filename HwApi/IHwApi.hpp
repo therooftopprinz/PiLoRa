@@ -39,8 +39,8 @@ struct IGpio
 
 std::shared_ptr<ISpi>  getSpi(uint8_t channel);
 std::shared_ptr<IGpio> getGpio();
-void setupHwapi();
-void teardownHwapi();
+void setup();
+void teardown();
 
 } // hwapi
 

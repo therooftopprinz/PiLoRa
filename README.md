@@ -21,22 +21,20 @@ Usage:
                 Transmit Mode
                 Address to open for tx data
                 Required if not rx
-
 --rx=address
                 Receive Mode
                 Address to send rx data
                 Required if not tx
-
 --bandwidth=N
-                Bandwidth {500 kHz, 250 kHz, 125 kHz}
-                Default: 500Khz
+                Bandwidth in kHz {500, 250, 125}
+                Default: 500
 
 --coding-rate=N
                 Coding Rate {4/5, 4/6, 4/7, 4/8}
                 Default: 4/5
 
 --spreading-factor=N
-                Spreading Factor {SF6, SF7, SF8, SF9, SF10, SF11, SF12}
+                Spreading Factor {6, 7, 8, 9, 10, 11, 12}
                 Default: SF7
 
 --mtu=N
@@ -44,14 +42,13 @@ Usage:
                 Default: 0
 
 --tx-power=N
-                Power Amplifier
-                0 to 14dBm
-                Default: 14dBm
+                Power Amplifier in dBm, 0 to 14dBm
+                Default: 14
 
 --rx-gain=N
-                LNA Gain {G1, G2, G3, G4, G5, G6}
-                G1 Is the highest
-                Default: G1
+                LNA Gain {1, 2, 3, 4, 5, 6}
+                1 is the highest
+                Default: 1
 
 ```
 

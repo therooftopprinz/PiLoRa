@@ -2,9 +2,13 @@
 #include <IHwApi.hpp>
 #include <iostream>
 #include <regex>
+#include <App.hpp>
 
 int main(int argc, const char* argv[])
 {
+    logger::Logger log("main");
+    log << logger::DEBUG << "App::App";
+
     std::cout << "argc: " << argc << "\n";
     
     std::regex arger("^--(.+?)=(.+?)$");
@@ -25,4 +29,9 @@ int main(int argc, const char* argv[])
             throw std::runtime_error(std::string("invalid argument: `") + argv[i] + "`");
         }
     }
+
+    app::App app(options);
+    auto rv = app.run();
+    logger::LoggerServer::getInstance().waitEmpty();
+    return rv;
 }
