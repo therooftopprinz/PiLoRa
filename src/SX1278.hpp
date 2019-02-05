@@ -8,6 +8,8 @@
 #include <atomic>
 #include <cstring>
 #include <deque>
+#include <Buffer.hpp>
+#include <Logger.hpp>
 
 namespace flylora_sx127x
 {
@@ -26,13 +28,14 @@ public:
         mGpio.setMode(pResetPin, hwapi::PinMode::OUTPUT);
         mGpio.setMode(pDio1Pin,  hwapi::PinMode::INPUT);
         mGpio.set(mResetPin, 0);
-        mDio1CbId = mGpio.registerCallback(mDio1Pin, hwapi::Edge::RISING, [](uint32_t) {});
+        mDio1CbId = mGpio.registerCallback(mDio1Pin, hwapi::Edge::RISING, [this](uint32_t){onDio1();});
         init();
     }
 
     ~SX1278()
     {
         mGpio.deregisterCallback(mDio1CbId);
+        bufferQueueCv.notify_one();
     }
 
     void resetModule()
@@ -162,16 +165,22 @@ public:
         mSpi.xfer(wro, wri, 1+pSize);
 
         setMode(Mode::TX);
-
         {
             using namespace std::chrono_literals;
             std::unique_lock<std::mutex> lock(pTxDoneMutex);
+            // TODO: Configurable TX TIMEOUT
             pTxDoneCv.wait_for(lock, 1s, [this]{return pTxDone;});
+            if (!pTxDone)
+            {
+                mLogger << logger::ERROR << "tx timeout";
+                return -1;
+            }
             pTxDone = false;
         }
+        return pSize;
     }
 
-    std::vector<uint8_t> rx()
+    common::Buffer rx()
     {
         std::unique_lock<std::mutex> lock(bufferQueueMutex);
 
@@ -184,10 +193,11 @@ public:
 
         if (bufferQueue.size())
         {
+            mLogger << logger::ERROR << "rx timeout";
             return {};
         }
 
-        std::vector<uint8_t> rv = std::move(bufferQueue.front());
+        common::Buffer rv = std::move(bufferQueue.front());
         bufferQueue.pop_front();
         return rv;
     }
@@ -234,6 +244,7 @@ private:
 
     void onDio1()
     {
+        mLogger << logger::DEBUG << "onDio1!!";
         if (Usage::RXC == mUsage)
         {
             // TODO: ANNOTATE SPECS
@@ -244,8 +255,7 @@ private:
             uint8_t wri[257];
             wro[1] = REGFIFO;
             mSpi.xfer(wro, wri, 1+rcvSz);
-
-            std::vector<uint8_t> pvect(rcvSz);
+            common::Buffer pvect(new std::byte[rcvSz], size_t(rcvSz));
             std::memcpy(pvect.data(), wri+1, rcvSz);
 
             {
@@ -267,12 +277,11 @@ private:
 
     std::condition_variable bufferQueueCv;
     std::mutex bufferQueueMutex;
-    std::deque<std::vector<uint8_t>> bufferQueue;
+    std::deque<common::Buffer> bufferQueue;
 
     std::condition_variable pTxDoneCv{};
     std::mutex pTxDoneMutex;
     bool pTxDone{};
-
 
     uint32_t mFosc = 32000000ul;
     unsigned mResetPin{};
@@ -282,6 +291,8 @@ private:
 
     hwapi::ISpi& mSpi;
     hwapi::IGpio& mGpio;
+
+    logger::Logger mLogger = logger::Logger("SX1278");
 };
 
 } // flylora_sx127x

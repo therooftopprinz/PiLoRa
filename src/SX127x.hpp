@@ -182,12 +182,12 @@ constexpr uint8_t SIGNALDETECTEDMASK        = 0b00000001; // Signal Detected
 // RegPktSnrValue               0x19
 constexpr uint8_t REGPKTSNRVALUE            = 0x19;
 
-double convertPktSnrValueToSNR(uint8_t pktSnr) {return -pktSnr/4;}
+inline double convertPktSnrValueToSNR(uint8_t pktSnr) {return -pktSnr/4;}
 
 // RegPktRssiValue              0x1A
 constexpr uint8_t REGPKTRSSIVALUE           = 0x1A; // RSSI of the latest packet received (dBm)
 
-double convertPacketRssiValueToRssi(bool isHF, uint8_t pktRssi)
+inline double convertPacketRssiValueToRssi(bool isHF, uint8_t pktRssi)
 {
     if (isHF)
         return -157 + int(pktRssi);
@@ -197,7 +197,7 @@ double convertPacketRssiValueToRssi(bool isHF, uint8_t pktRssi)
 // RegRssiValue                 0x1B
 constexpr uint8_t REGRSSIVALUE              = 0x1B; // Current RSSI value (dBm)
 
-double convertRssiValueToRssi(bool isHF, uint8_t rssi)
+inline double convertRssiValueToRssi(bool isHF, uint8_t rssi)
 {
     if (isHF)
         return -157 + int(rssi);

@@ -117,7 +117,7 @@ common.target_archive('common.a')
 
 hwapistub = Build()
 hwapistub.set_cxxflags(CXXFLAGS)
-hwapistub.add_include_paths(['HwApiStub', 'HwApi/', 'common/'])
+hwapistub.add_include_paths(['HwApiStub', 'HwApi/', 'common/', 'src/'])
 hwapistub.set_src_dir(TLD+'HwApiStub/')
 hwapistub.add_src_files(STUB_SOURCES)
 hwapistub.target_archive('stub.a')

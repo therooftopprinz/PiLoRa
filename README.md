@@ -25,6 +25,9 @@ Usage:
                 Receive Mode
                 Address to send rx data
                 Required if not tx
+--carrier=N
+                Carrier in Hz
+                Required
 --bandwidth=N
                 Bandwidth in kHz {7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125, 250, 500}
                 Default: 500

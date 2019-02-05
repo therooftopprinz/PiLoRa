@@ -51,6 +51,11 @@ public:
         return false;
     }
 
+    uint32_t getCarrier() const
+    {
+        return parseUnsigned("carrier");
+    }
+
     flylora_sx127x::Bw getBw() const
     {
         return parseBw("bandwidth");
@@ -92,6 +97,16 @@ public:
     }
 
 private:
+    uint32_t parseUnsigned(std::string pKey) const
+    {
+        auto it = mOptions.find(pKey);
+        if (it == mOptions.cend())
+        {
+            throw std::runtime_error(pKey + " option is missing!");
+        }
+        return std::stoul(it->second);
+    }
+
     int parseInt(std::string pKey) const
     {
         auto it = mOptions.find(pKey);
@@ -220,7 +235,6 @@ private:
         throw std::runtime_error(it->second + " is invalid lna gain value");
     }
 
-
 private:
     const Options& mOptions;
 };
@@ -233,6 +247,7 @@ public:
         , mCtrlAddr(pArgs.getCtrlAddr())
         , mMode(pArgs.isTx()? Mode::TX : Mode::RX)
         , mIoAddr(pArgs.getIoAddr())
+        , mCarrier(pArgs.getCarrier())
         , mBw(pArgs.getBw())
         , mCr(pArgs.getCr())
         , mSf(pArgs.getSf())
@@ -263,6 +278,7 @@ public:
             << ((mIoAddr.addr>>8)&0xFF) << "."
             << (mIoAddr.addr&0xFF) << ":"
             << (mIoAddr.port);
+        mLogger << logger::DEBUG << "Carrier:         " << mCarrier << " Hz";
         mLogger << logger::DEBUG << "bandwidth:       " <<
             ((const char*[]){"7.8", "10.4", "15.6", "20.8", "31.25", "41.7", "62.5", "125", "250", "500",})[int(mCr)] << " kHz";
         mLogger << logger::DEBUG << "Coding Rate:     " <<
@@ -273,6 +289,8 @@ public:
         mLogger << logger::DEBUG << "Tx Power:        " << mTxPower;
         mLogger << logger::DEBUG << "Rx Gain:         " <<
             ((const char*[]){"", "G1", "G2", "G3", "G4", "G5", "G6"})[int(mRxGain)];
+        mLogger << logger::DEBUG << "Reset Pin:       " << mResetPin;
+        mLogger << logger::DEBUG << "TX/RX Done Pin:  " << mDio1Pin;
 
         mCtrlSock->bind(mCtrlAddr);
         if (Mode::TX == mMode)
@@ -287,16 +305,49 @@ public:
 
     int run()
     {
-        mLogger << logger::DEBUG << "App::run";
+        mLogger << logger::DEBUG << "App::run Initializing LoRa module.";
+        mModule.resetModule();
+        mModule.setUsage(Mode::TX==mMode ? flylora_sx127x::SX1278::Usage::TX :
+            flylora_sx127x::SX1278::Usage::RXC);
+        mModule.setCarrier(mCarrier);
+        mModule.configureModem(mBw, mCr, false, mSf);
+        mModule.setOutputPower(mTxPower);
+        mModule.start();
+
+        if (Mode::RX == mMode)
+        {
+            runRx();
+        }
+        else
+        {
+            runTx();
+        }
         return 0;
     }
 
 private:
+    void runRx()
+    {
+        // mModule.receive();
+    }
+
+    void runTx()
+    {
+        common::Buffer recvbuffer(new std::byte[1024], 1024);
+        while (1)
+        {
+            net::IpPort dst;
+            auto sz = mIoSock->recvfrom(recvbuffer, dst);
+            mModule.tx((uint8_t*)recvbuffer.data(), sz);
+        }
+    }
+
     enum class Mode{TX, RX};
     uint32_t mChannel;
     net::IpPort mCtrlAddr;
     Mode mMode;
     net::IpPort mIoAddr;
+    uint32_t mCarrier;
     flylora_sx127x::Bw mBw;
     flylora_sx127x::CodingRate mCr;
     flylora_sx127x::SpreadingFactor mSf;
@@ -310,6 +361,8 @@ private:
     std::shared_ptr<hwapi::ISpi>  mSpi;
     std::shared_ptr<hwapi::IGpio> mGpio;
     flylora_sx127x::SX1278 mModule;
+    std::thread mCtrlReceiver;
+    std::thread mModulelReceiver;
     logger::Logger mLogger;
 };
 
