@@ -29,7 +29,7 @@ int main(int argc, const char* argv[])
         }
     }
 
-    std::unique_ptr<net::IUdpFactory> udpFactory;
+    std::unique_ptr<net::IUdpFactory> udpFactory = std::make_unique<net::UdpFactory>();
     app::Args args(options);
     app::App app(*udpFactory, args);
     auto rv = app.run();

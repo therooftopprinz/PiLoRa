@@ -20,13 +20,11 @@ enum class PinMode
     INPUT
 };
 
-
 enum class Edge
 {
     FALLING,
     RISING
 };
-
 
 struct IGpio
 {
