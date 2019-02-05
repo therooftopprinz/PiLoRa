@@ -1,15 +1,14 @@
+#include <iostream>
+#include <memory>
+#include <regex>
 #include <SX1278.hpp>
 #include <IHwApi.hpp>
-#include <iostream>
-#include <regex>
 #include <App.hpp>
 
 int main(int argc, const char* argv[])
 {
     logger::Logger log("main");
     log << logger::DEBUG << "App::App";
-
-    std::cout << "argc: " << argc << "\n";
     
     std::regex arger("^--(.+?)=(.+?)$");
     std::smatch match;
@@ -20,17 +19,18 @@ int main(int argc, const char* argv[])
         auto s = std::string(argv[i]);
         if (std::regex_match(s, match, arger))
         {
-            std::cout << "key:" << match[1].str()  << " value:" << match[2].str() << "\n";
+            log << logger::DEBUG << "key:" << match[1].str() << " value:" << match[2].str();
             options.emplace(match[1].str(), match[2].str());
         }
         else
         {
-            std::cout << "match failed\n";
+            log << logger::DEBUG << "match failed";
             throw std::runtime_error(std::string("invalid argument: `") + argv[i] + "`");
         }
     }
 
-    app::App app(options);
+    std::unique_ptr<net::IUdpFactory> udpFactory;
+    app::App app(std::move(udpFactory), options);
     auto rv = app.run();
     logger::LoggerServer::getInstance().waitEmpty();
     return rv;

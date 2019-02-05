@@ -3,12 +3,19 @@
 
 #include <sys/socket.h>
 #include <Buffer.hpp>
+#include <memory>
 
-namespace socket
+namespace net
 {
 
 struct IpPort
 {
+    IpPort() = default;
+    IpPort (uint32_t pAddr, uint16_t pPort)
+        : addr(pAddr)
+        , port(pPort)
+    {}
+
     uint32_t addr;
     uint16_t port;
 };
@@ -22,7 +29,7 @@ struct ISocket
 
 struct IUdpFactory
 {
-    virtual ISocket create() = 0;
+    virtual std::unique_ptr<ISocket> create() = 0;
 };
 
 }
