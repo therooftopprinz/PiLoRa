@@ -3,6 +3,8 @@
 #include <sstream>
 #include <iomanip>
 #include <cstring>
+#include <map>
+#include <memory>
 
 namespace hwapi
 {
@@ -51,11 +53,57 @@ private:
 struct GpioStub : IGpio
 {
 public:
+    int setMode(unsigned pGpio, PinMode pMode)
+    {
+        return 0;
+    }
+
+    int get(unsigned pGpio)
+    {
+        return 0;
+    }
+
+    int set(unsigned pGpio, unsigned pLevel)
+    {
+        return 0;
+    }
+
+    int registerCallback(unsigned pUserGpio, Edge pEdge, std::function<void(uint32_t tick)> pCb)
+    {
+        return 0;
+    }
+
+    int deregisterCallback(int pCallbackId)
+    {
+        return 0;
+    }
+
 private:
 };
 
-std::shared_ptr<ISpi>  getSpi(uint8_t channel);
-std::shared_ptr<IGpio> getGpio();
-void setup();
-void teardown();
+std::shared_ptr<ISpi> getSpi(uint8_t pChannel)
+{
+    static std::map<int, std::shared_ptr<ISpi>> spiMap;
+    auto it = spiMap.find(pChannel);
+    if (spiMap.end() == it)
+    {
+        spiMap.emplace(pChannel, std::make_shared<Sx1278SpiStub>(pChannel));
+    }
+
+    return spiMap[pChannel];
+}
+
+std::shared_ptr<IGpio> getGpio()
+{
+    static std::shared_ptr<IGpio> gpio = std::make_shared<GpioStub>();
+    return gpio;
+}
+void setup()
+{
+}
+
+void teardown()
+{
+}
+
 } // hwapi

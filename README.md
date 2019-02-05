@@ -1,10 +1,11 @@
 # PiLora
+
 Semtech SX1278 LoRa daemon for RaspBerry Pi
 
 Dependency:
 * pigpio
 
-Usage:
+## Usage
 ```
 ./pilora -h
 Usage:
@@ -12,7 +13,6 @@ Usage:
 --channel=N
                 SPI Channel on Raspberry Pi
                 Mandatory
-
 --cx=address
                 Link Control
                 UDP address to open for link control
@@ -26,33 +26,27 @@ Usage:
                 Address to send rx data
                 Required if not tx
 --bandwidth=N
-                Bandwidth in kHz {500, 250, 125}
+                Bandwidth in kHz {7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125, 250, 500}
                 Default: 500
-
 --coding-rate=N
                 Coding Rate {4/5, 4/6, 4/7, 4/8}
                 Default: 4/5
-
 --spreading-factor=N
-                Spreading Factor {6, 7, 8, 9, 10, 11, 12}
+                Spreading Factor {SF6, SF7, SF8, SF9, SF10, SF11, SF12}
                 Default: SF7
-
 --mtu=N
                 MTU Size (0 for variable size, max 255 bytes)
                 Default: 0
-
 --tx-power=N
                 Power Amplifier in dBm, 0 to 14dBm
                 Default: 14
-
 --rx-gain=N
-                LNA Gain {1, 2, 3, 4, 5, 6}
-                1 is the highest
-                Default: 1
-
+                LNA Gain {G1, G2, G3, G4, G5, G6}
+                G1 is the highest
+                Default: G1
 ```
 
-Control Messages:
+## Control Messages
 ```
 struct Header
 {
@@ -76,10 +70,9 @@ struct ReconfigurationResponse
     Header hdr;
     uint8_t status;
 };
-
 ```
 
-Building:
+## Building
 ```
 # Generating Makefile:
 mkdir build
@@ -99,9 +92,9 @@ cd build
 make binpigpio
 ```
 
-Stubbed Target:
+## Stubbed Target
 PiLoRa can still be tested without Raspberry Pi using the stubbed target.
-Stubbed target will open udp socket at 0.0.0.0:8888 for rx and will send upd packet to localhost:8881 for tx
+Stubbed target will open udp socket at 0.0.0.0:8888 for rx and will send upd packet to localhost:8881 for tx.
 
-Pigpio Target:
+## Pigpio Target
 PiLoRa is linked with pigpio. PiLoRa will use the SPI and GPIO in pigpio.

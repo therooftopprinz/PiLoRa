@@ -241,12 +241,12 @@ enum class CodingRate
 
 // RegModemConfig2              0x1E
 constexpr uint8_t REGMODEMCONFIG2           = 0x1E;
-constexpr uint8_t SPREADNGFACTORMASK        = 0b11110000; // SpreadngFactor
+constexpr uint8_t SPREADINGFACTORMASK        = 0b11110000; // SpreadingFactor
 constexpr uint8_t TXCONTINOUSMODEMASK       = 0b00001000; // TxContinousMode
 constexpr uint8_t RXPAYLOADCRCONMASK        = 0b00000100; // RxPayloadCrcOn
 constexpr uint8_t SYMBTIMEOUTMSBMASK        = 0b00000011; // SymbTimeout MSB
 
-enum class SpreadngFactor
+enum class SpreadingFactor
 {
     SF_6 = 6,                   // SF6
     SF_7,                       // SF7

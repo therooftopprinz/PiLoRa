@@ -11,14 +11,88 @@ namespace app
 
 using Options = std::map<std::string, std::string>;
 
-class ArgParser
+class Args
 {
 public:
-    ArgParser(const Options& pOptions)
+    Args(const Options& pOptions)
         : mOptions(pOptions)
     {}
 
-    int parseInt(std::string pKey)
+    int getChannel() const
+    {
+        return parseInt("channel");
+    }
+
+    net::IpPort getCtrlAddr() const
+    {
+        return parseIpPort("cx", {0, 2221u});
+    }
+
+    net::IpPort getIoAddr() const
+    {
+        if (isTx())
+        {
+            return parseIpPort("tx", {0, 0});
+        }
+        return parseIpPort("rx", {0, 0});
+    }
+
+    bool isTx() const
+    {
+        auto ioAddr = parseIpPort("rx", {0, 0});
+        if (ioAddr.port == 0)
+        {
+            return true;
+        }
+        if (ioAddr.port == 0)
+        {
+            throw std::runtime_error("please select either tx or rx");
+        }
+        return false;
+    }
+
+    flylora_sx127x::Bw getBw() const
+    {
+        return parseBw("bandwidth");
+    }
+
+    flylora_sx127x::CodingRate getCr() const
+    {
+        return parseCr("coding-rate");
+    }
+
+    flylora_sx127x::SpreadingFactor getSf() const
+    {
+        return parseSf("spreading-factor");
+    }
+
+    int getMtu() const
+    {
+        return parseInt("mtu", 0);
+    }
+
+    int getTxPower() const
+    {
+        return parseInt("tx-power", 17);
+    }
+
+    flylora_sx127x::LnaGain getLnaGain() const
+    {
+        return parseGain("rx-gain");
+    }
+
+    int getResetPin() const
+    {
+        return parseInt("reset-pin");
+    }
+
+    int getGetDio1Pin() const
+    {
+        return parseInt("txrx-done-pin");
+    }
+
+private:
+    int parseInt(std::string pKey) const
     {
         auto it = mOptions.find(pKey);
         if (it == mOptions.cend())
@@ -28,7 +102,7 @@ public:
         return std::stoi(it->second);
     }
 
-    int parseInt(std::string pKey, int pDefaultValue)
+    int parseInt(std::string pKey, int pDefaultValue) const
     {
         auto it = mOptions.find(pKey);
         if (it == mOptions.cend())
@@ -38,7 +112,7 @@ public:
         return std::stoi(it->second);
     }
 
-    net::IpPort parseIpPort(std::string pKey, net::IpPort pDefault)
+    net::IpPort parseIpPort(std::string pKey, net::IpPort pDefault) const
     {
         std::regex addressFilter("([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+):([0-9]+)");
         std::smatch match;
@@ -61,7 +135,7 @@ public:
                 uint8_t c = std::stoi(match[3].str());
                 uint8_t d = std::stoi(match[4].str());
                 uint16_t port = std::stoi(match[5].str());
-                rv = {uint32_t((a<<24)|(b<<16)|(c<<8)|d), port};
+                rv = net::toIpPort(a,b,c,d,port);
             }
             else
             {
@@ -71,7 +145,7 @@ public:
         return rv;
     }
 
-    flylora_sx127x::Bw parseBw(std::string pKey)
+    flylora_sx127x::Bw parseBw(std::string pKey) const
     {
         auto it = mOptions.find(pKey);
         if (it == mOptions.cend())
@@ -93,7 +167,7 @@ public:
         throw std::runtime_error(it->second + " is invalid bandwidth value");
     }
 
-    flylora_sx127x::CodingRate parseCr(std::string pKey)
+    flylora_sx127x::CodingRate parseCr(std::string pKey) const
     {
         auto it = mOptions.find(pKey);
         if (it == mOptions.cend())
@@ -109,26 +183,26 @@ public:
         throw std::runtime_error(it->second + " is invalid coding rate value");
     }
 
-    flylora_sx127x::SpreadngFactor parseSf(std::string pKey)
+    flylora_sx127x::SpreadingFactor parseSf(std::string pKey) const
     {
         auto it = mOptions.find(pKey);
         if (it == mOptions.cend())
         {
-            return flylora_sx127x::SpreadngFactor::SF_7;
+            return flylora_sx127x::SpreadingFactor::SF_7;
         }
 
-        if (it->second == "SF6") return flylora_sx127x::SpreadngFactor::SF_6;
-        if (it->second == "SF7") return flylora_sx127x::SpreadngFactor::SF_7;
-        if (it->second == "SF8") return flylora_sx127x::SpreadngFactor::SF_8;
-        if (it->second == "SF9") return flylora_sx127x::SpreadngFactor::SF_9;
-        if (it->second == "SF10") return flylora_sx127x::SpreadngFactor::SF_10;
-        if (it->second == "SF11") return flylora_sx127x::SpreadngFactor::SF_11;
-        if (it->second == "SF12") return flylora_sx127x::SpreadngFactor::SF_12;
+        if (it->second == "SF6") return flylora_sx127x::SpreadingFactor::SF_6;
+        if (it->second == "SF7") return flylora_sx127x::SpreadingFactor::SF_7;
+        if (it->second == "SF8") return flylora_sx127x::SpreadingFactor::SF_8;
+        if (it->second == "SF9") return flylora_sx127x::SpreadingFactor::SF_9;
+        if (it->second == "SF10") return flylora_sx127x::SpreadingFactor::SF_10;
+        if (it->second == "SF11") return flylora_sx127x::SpreadingFactor::SF_11;
+        if (it->second == "SF12") return flylora_sx127x::SpreadingFactor::SF_12;
 
         throw std::runtime_error(it->second + " is invalid spreading factor value");
     }
 
-    flylora_sx127x::LnaGain parseGain(std::string pKey)
+    flylora_sx127x::LnaGain parseGain(std::string pKey) const
     {
         auto it = mOptions.find(pKey);
         if (it == mOptions.cend())
@@ -154,55 +228,41 @@ private:
 class App
 {
 public:
-    using Options = std::map<std::string, std::string>;
-    App(std::unique_ptr<net::IUdpFactory> pUdpFactory, const Options& pOptions)
-        : mUdpFactory(std::move(pUdpFactory))
+    App(net::IUdpFactory& pUdpFactory, const Args& pArgs)
+        : mChannel(pArgs.getChannel())
+        , mCtrlAddr(pArgs.getCtrlAddr())
+        , mMode(pArgs.isTx()? Mode::TX : Mode::RX)
+        , mIoAddr(pArgs.getIoAddr())
+        , mBw(pArgs.getBw())
+        , mCr(pArgs.getCr())
+        , mSf(pArgs.getSf())
+        , mMtu(pArgs.getMtu())
+        , mTxPower(pArgs.getTxPower())
+        , mRxGain(pArgs.getLnaGain())
+        , mResetPin(pArgs.getResetPin())
+        , mDio1Pin(pArgs.getGetDio1Pin())
+        , mCtrlSock(pUdpFactory.create())
+        , mIoSock(pUdpFactory.create())
+        , mSpi(hwapi::getSpi(mChannel))
+        , mGpio(hwapi::getGpio())
+        , mModule(*mSpi, *mGpio, mResetPin, mDio1Pin)
         , mLogger("App")
     {
-        mLogger << logger::DEBUG << "App::App";
-
-        ArgParser parser(pOptions);
-
-        mChannel = parser.parseInt("channel");
-        mCtrl = parser.parseIpPort("cx", {0, 2221u});
-        mIo = parser.parseIpPort("rx", {0, 0});
-
-        mMode = Mode::RX;
-
-        if (mIo.port == 0)
-        {
-            mMode = Mode::TX;
-            mIo = parser.parseIpPort("tx", {0, 0});
-        }
-
-        if (mIo.port == 0)
-        {
-            throw std::runtime_error("please select either tx or rx");
-        }
-
-        mBw = parser.parseBw("bandwidth");
-        mCr = parser.parseCr("coding-rate");
-        mSf = parser.parseSf("spreading-factor");
-        mMtu = parser.parseInt("mtu", 0);
-        mTxPower = parser.parseInt("tx-power", 17);
-        mRxGain = parser.parseGain("rx-gain");
-
         mLogger << logger::DEBUG << "-------------- Parameters ---------------";
         mLogger << logger::DEBUG << "channel:         " << mChannel;
         mLogger << logger::DEBUG << "Mode:            " << ((const char*[]){"TX", "RX"})[int(mMode)];
         mLogger << logger::DEBUG << "Control Address: "
-            << ((mCtrl.addr>>24)&0xFF) << "."
-            << ((mCtrl.addr>>16)&0xFF) << "."
-            << ((mCtrl.addr>>8)&0xFF) << "."
-            << (mCtrl.addr&0xFF) << ":"
-            << (mCtrl.port);
+            << ((mCtrlAddr.addr>>24)&0xFF) << "."
+            << ((mCtrlAddr.addr>>16)&0xFF) << "."
+            << ((mCtrlAddr.addr>>8)&0xFF) << "."
+            << (mCtrlAddr.addr&0xFF) << ":"
+            << (mCtrlAddr.port);
         mLogger << logger::DEBUG << "TX/RX Address:   "
-            << ((mIo.addr>>24)&0xFF) << "."
-            << ((mIo.addr>>16)&0xFF) << "."
-            << ((mIo.addr>>8)&0xFF) << "."
-            << (mIo.addr&0xFF) << ":"
-            << (mIo.port);
-
+            << ((mIoAddr.addr>>24)&0xFF) << "."
+            << ((mIoAddr.addr>>16)&0xFF) << "."
+            << ((mIoAddr.addr>>8)&0xFF) << "."
+            << (mIoAddr.addr&0xFF) << ":"
+            << (mIoAddr.port);
         mLogger << logger::DEBUG << "bandwidth:       " <<
             ((const char*[]){"7.8", "10.4", "15.6", "20.8", "31.25", "41.7", "62.5", "125", "250", "500",})[int(mCr)] << " kHz";
         mLogger << logger::DEBUG << "Coding Rate:     " <<
@@ -213,6 +273,16 @@ public:
         mLogger << logger::DEBUG << "Tx Power:        " << mTxPower;
         mLogger << logger::DEBUG << "Rx Gain:         " <<
             ((const char*[]){"", "G1", "G2", "G3", "G4", "G5", "G6"})[int(mRxGain)];
+
+        mCtrlSock->bind(mCtrlAddr);
+        if (Mode::TX == mMode)
+        {
+            mIoSock->bind(mIoAddr);
+        }
+        else
+        {
+            mIoSock->bind({});
+        }
     }
 
     int run()
@@ -224,17 +294,22 @@ public:
 private:
     enum class Mode{TX, RX};
     uint32_t mChannel;
-    net::IpPort mCtrl;
+    net::IpPort mCtrlAddr;
     Mode mMode;
-    net::IpPort mIo;
+    net::IpPort mIoAddr;
     flylora_sx127x::Bw mBw;
     flylora_sx127x::CodingRate mCr;
-    flylora_sx127x::SpreadngFactor mSf;
+    flylora_sx127x::SpreadingFactor mSf;
     int mMtu;
     int mTxPower;
     flylora_sx127x::LnaGain mRxGain;
-
-    std::unique_ptr<net::IUdpFactory> mUdpFactory;
+    int mResetPin;
+    int mDio1Pin;
+    std::unique_ptr<net::ISocket> mCtrlSock;
+    std::unique_ptr<net::ISocket> mIoSock;
+    std::shared_ptr<hwapi::ISpi>  mSpi;
+    std::shared_ptr<hwapi::IGpio> mGpio;
+    flylora_sx127x::SX1278 mModule;
     logger::Logger mLogger;
 };
 

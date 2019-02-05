@@ -30,7 +30,8 @@ int main(int argc, const char* argv[])
     }
 
     std::unique_ptr<net::IUdpFactory> udpFactory;
-    app::App app(std::move(udpFactory), options);
+    app::Args args(options);
+    app::App app(*udpFactory, args);
     auto rv = app.run();
     logger::LoggerServer::getInstance().waitEmpty();
     return rv;

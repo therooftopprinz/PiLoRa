@@ -82,11 +82,11 @@ public:
         return (mFosc*cf)/524288;
     }
 
-    void configureModem(Bw pBandwidth, CodingRate pCodingRate, bool implicitHeader, SpreadngFactor pSpreadingFactor)
+    void configureModem(Bw pBandwidth, CodingRate pCodingRate, bool implicitHeader, SpreadingFactor pSpreadingFactor)
     {
         // 4.1.1. Link Design Using the LoRa Modem - SX1276/77/78/79 DATASHEET
         // 6.4.   LoRa Mode Register Map - SX1276/77/78/79 DATASHEET
-        if (SpreadngFactor::SF_6 == pSpreadingFactor)
+        if (SpreadingFactor::SF_6 == pSpreadingFactor)
         {
             implicitHeader = true;
         }
@@ -94,8 +94,8 @@ public:
         uint8_t config1 = setMasked(BWMASK, uint8_t(pBandwidth))
                         | setMasked(CODINGRATEMASK, uint8_t(pCodingRate))
                         | setMasked(IMPLICITHEADERMODEONMASK, implicitHeader);
-        uint8_t config2 = setMasked(SPREADNGFACTORMASK, uint8_t(pSpreadingFactor));
-        uint8_t config3 = (uint8_t(pSpreadingFactor) >= uint8_t(SpreadngFactor::SF_11) ? LOWDATARATEOPTIMIZEMASK : 0); // DEFAULT LNA GAIN IS G1
+        uint8_t config2 = setMasked(SPREADINGFACTORMASK, uint8_t(pSpreadingFactor));
+        uint8_t config3 = (uint8_t(pSpreadingFactor) >= uint8_t(SpreadingFactor::SF_11) ? LOWDATARATEOPTIMIZEMASK : 0); // DEFAULT LNA GAIN IS G1
 
         setRegister(REGMODEMCONFIG1, config1);
         setRegister(REGMODEMCONFIG2, config2);
