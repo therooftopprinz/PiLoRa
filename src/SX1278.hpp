@@ -244,7 +244,6 @@ private:
 
     void onDio1()
     {
-        mLogger << logger::DEBUG << "onDio1!!";
         if (Usage::RXC == mUsage)
         {
             // TODO: ANNOTATE SPECS

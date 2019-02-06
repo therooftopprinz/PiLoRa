@@ -8,10 +8,12 @@
 #include <IHwApi.hpp>
 #include <Logger.hpp>
 #include <SX127x.hpp>
+#include <Udp.hpp>
 
 namespace hwapi
 {
 
+// TODO: put somewhere
 std::string toHexString(const uint8_t* pData, size_t size)
 {
     std::stringstream ss;;
@@ -70,9 +72,9 @@ class Sx1278SpiStub : public ISpi
 public:
     Sx1278SpiStub(int pChannel)
         : mChannel(pChannel)
-        , mLogger("Sx1278SpiStub")
+        , mLogger(std::string("Sx1278SpiStub[")+std::to_string(pChannel)+"]")
     {
-        mLogger << logger::DEBUG << "channel: " << mChannel;
+        mSocket.bind(net::IpPort(0, 8888));
     }
 
     int read(uint8_t *, unsigned)
@@ -85,7 +87,7 @@ public:
     }
     int xfer(uint8_t *pDataOut, uint8_t *pDataIn, unsigned pCount)
     {
-        mLogger << logger::DEBUG << "channel: " << mChannel << " xfer: " << toHexString(pDataOut, pCount);
+        // mLogger << logger::DEBUG << " xfer: " << toHexString(pDataOut, pCount);
         bool isWrite = 0x80&pDataOut[0];
         uint8_t reg = 0x7F&pDataOut[0];
         std::memcpy(pDataIn+1, pDataOut+1, pCount-1);
@@ -102,29 +104,74 @@ private:
     void regwrite(uint8_t pReg, uint8_t *pDataOut, unsigned pCount)
     {
         uint regVal = pDataOut[1];
+        setValue(pReg, regVal);
         switch (pReg)
         {
+            case flylora_sx127x::REGFIFO:
+            {
+                auto fifoIdx = getValue(flylora_sx127x::REGFIFOADDRPTR);
+                mLogger << logger::DEBUG << "FIFO WRITE: " << toHexString(pDataOut+1, pCount-1);
+                if (fifoIdx+pCount > 256)
+                {
+                    throw std::runtime_error("FIFO OVERRUN!!");
+                }
+                std::memcpy(mFifo+fifoIdx, pDataOut+1, pCount-1);
+                break;
+            }
             case flylora_sx127x::REGOPMODE:
             {
-                mLogger << logger::DEBUG << "REGOPMODE=" << regVal;
-                auto mode = flylora_sx127x::getUnmasked(flylora_sx127x::MODEMASK, regVal);
-                if (mode == unsigned(flylora_sx127x::Mode::TX))
+                auto mode = getValue<flylora_sx127x::Mode>(pReg, flylora_sx127x::MODEMASK);
+
+                if (flylora_sx127x::Mode::TX == mode)
                 {
-                    std::thread([this]{
-                        using namespace std::literals::chrono_literals;
-                        std::this_thread::sleep_for(1ms);
-                        mLogger << logger::DEBUG << "CALLING CB";
-                        std::static_pointer_cast<GpioStub>(getGpio())->cb(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
-                    }).detach();
+                    mLogger << logger::DEBUG << "----- TRANSMITTING -----";
+                    auto fifoTxBase = getValue(flylora_sx127x::REGFIFOTXBASEADD);
+                    // TODO: TX LEN FOR IMPLICIT HEADER MODE
+                    auto txLen = getValue(flylora_sx127x::REGPAYLOADLENGTH);
+                    common::Buffer data((std::byte*)(mFifo+fifoTxBase), txLen, false);
+                    mSocket.sendto(data, net::toIpPort(127,0,0,1,8889));
+
+                    std::static_pointer_cast<GpioStub>(getGpio())->cb(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
+                    setValue(pReg, flylora_sx127x::Mode::STDBY, flylora_sx127x::MODEMASK);
+                    mLogger << logger::DEBUG << "------- TX DONE --------";
                 }
+                break;
             }
-            default:
-            mLogger << logger::WARNING << "Uknown register " << unsigned(pReg);
         }; 
     }
+
+    template <typename R>
+    R getValue(uint8_t pReg, uint8_t pMask)
+    {
+        return static_cast<R>(flylora_sx127x::getUnmasked(pMask, mRegs[pReg]));
+    }
+
+    uint8_t getValue(uint8_t pReg)
+    {
+        return mRegs[pReg];
+    }
+
+
+    template <typename R>
+    void setValue(uint8_t pReg, R pValue, uint8_t pMask)
+    {
+        setValue(pReg, (mRegs[pReg]&(~pMask)) | flylora_sx127x::setMasked(pMask, uint64_t(pValue)));
+    }
+
+    void setValue(uint8_t pReg, uint8_t pValue)
+    {
+        std::stringstream ss;
+        ss << std::setw(24) << std::left <<flylora_sx127x::regIndexToString(pReg) << " = 0x" <<
+            std::hex << std::setw(2) << std::setfill('0') << unsigned(pValue);
+        // TODO: IMPROVE LOGGER
+        mLogger << logger::DEBUG << ss.str();
+        mRegs[pReg] = pValue;
+    }
+
     uint mRegs[128];
-    uint mFifo[128];
+    uint mFifo[256];
     int mChannel;
+    net::UdpSocket mSocket;
     logger::Logger mLogger;
 };
 

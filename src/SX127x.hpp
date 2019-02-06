@@ -32,6 +32,31 @@ enum class Mode                       // Device modes
     CAD                         // Channel activity detection
 };
 
+inline const char* enumToString(Mode pVal)
+{
+    switch (pVal)
+    {
+        case Mode::SLEEP:
+            return "SLEEP";
+        case Mode::STDBY:
+            return "STDBY";
+        case Mode::FSTX:
+            return "FSTX";
+        case Mode::TX:
+            return "TX";
+        case Mode::FSRX:
+            return "FSRX";
+        case Mode::RXCONTINUOUS:
+            return "RXCONTINUOUS";
+        case Mode::RXSINGLE:
+            return "RXSINGLE";
+        case Mode::CAD:
+            return "CAD";
+        default:
+            return "INVALID!";
+    }
+}
+
 // RegFrMsb     0x06
 constexpr uint8_t REGFRMSB                  = 0x06; // MSB (23:16) of RF carrier frequency
 // RegFrMid     0x07
@@ -257,7 +282,7 @@ enum class SpreadingFactor
     SF_12                       // SF12
 };
 
-// RegSymbTimeoutLsb              0x1E
+// RegSymbTimeoutLsb            0x1F
 constexpr uint8_t REGSYMBTIMEOUTLSB         = 0x1F; // SymbTimeout MSB
 
 inline double convertSymbTimeoutToTimeout(double ts, uint16_t symbTimeout)
@@ -361,8 +386,8 @@ enum class DioMapping2
 // RegVersion                   0x42
 constexpr uint8_t REGVERSION                = 0x42; // Version
 
-// RegPllHop                    0x42
-constexpr uint8_t REGPLLHOP                 = 0x42;
+// RegPllHop                    0x44
+constexpr uint8_t REGPLLHOP                 = 0x44;
 constexpr uint8_t FASTHOPONMASK             = 0b10000000; // FastHopOn
 
 // RegTcxo                      0x4B
@@ -402,6 +427,125 @@ enum class PllBandwidth
     E_255KHZ,
     E_300KHZ
 };
+
+inline const char* regIndexToString(uint8_t pReg)
+{
+    switch (pReg)
+    {
+        case 0x00:
+            return "RegFifo";
+        case 0x01:
+            return "RegOpMode";
+        case 0x06:
+            return "RegFrMsb";
+        case 0x07:
+            return "RegFrMid";
+        case 0x08:
+            return "RegFrLsb";
+        case 0x09:
+            return "RegPaConfig";
+        case 0x0A:
+            return "RegPaRamp";
+        case 0x0B:
+            return "RegPaRamp";
+        case 0x0C:
+            return "RegLna";
+        case 0x0D:
+            return "RegFifoAddrPtr";
+        case 0x0E:
+            return "RegFifoTxBaseAdd";
+        case 0x0F:
+            return "RegFifoRxBaseAdd";
+        case 0x10:
+            return "RegFifoRxCurrentAddr";
+        case 0x11:
+            return "RegIrqFlagsMaskMask";
+        case 0x12:
+            return "RegIrqFlags";
+        case 0x13:
+            return "RegRxNbBytes";
+        case 0x14:
+            return "RegRxHeaderCntValueMsb";
+        case 0x15:
+            return "RegRxHeaderCntValueLsb";
+        case 0x16:
+            return "RegRxPacketCntValueMsb";
+        case 0x17:
+            return "RegRxPacketCntValueLsb";
+        case 0x18:
+            return "RegModemStat";
+        case 0x19:
+            return "RegPktSnrValue";
+        case 0x1A:
+            return "RegPktRssiValue";
+        case 0x1B:
+            return "RegRssiValue";
+        case 0x1C:
+            return "RegHopChannel";
+        case 0x1D:
+            return "RegModemConfig1";
+        case 0x1E:
+            return "RegModemConfig2";
+        case 0x1F:
+            return "RegSymbTimeoutLsb";
+        case 0x20:
+            return "RegPreambleMsb";
+        case 0x21:
+            return "RegPreambleLsb";
+        case 0x22:
+            return "RegPayloadLength";
+        case 0x23:
+            return "RegMaxPayloadLength";
+        case 0x24:
+            return "RegHopPeriod";
+        case 0x25:
+            return "RegFifoRxByteAddr";
+        case 0x26:
+            return "RegModemConfig3";
+        case 0x27:
+            return "RegPpmCorrection";
+        case 0x28:
+            return "RegFeiMsb";
+        case 0x29:
+            return "RegFeiMid";
+        case 0x2A:
+            return "RegFeiLsb";
+        case 0x2C:
+            return "RegRssiWideband";
+        case 0x31:
+            return "RegDetectOptimize";
+        case 0x33:
+            return "RegInvertIQ";
+        case 0x37:
+            return "RegDetectionThreshold";
+        case 0x39:
+            return "RegSyncWord";
+        case 0x40:
+            return "RegDioMapping1";
+        case 0x41:
+            return "RegDioMapping2";
+        case 0x42:
+            return "RegVersion";
+        case 0x44:
+            return "RegPllHop";
+        case 0x4B:
+            return "RegTcxo";
+        case 0x4D:
+            return "RegPaDac";
+        case 0x5B:
+            return "RegFormerTemp";
+        case 0x61:
+            return "RegAgcRef";
+        case 0x62:
+            return "RegAgcThresh1";
+        case 0x63:
+            return "RegAgcThresh2";
+        case 0x64:
+            return "RegAgcThresh3";
+        default:
+            return "invalid";
+    }
+}
 
 inline uint64_t getUnmasked(uint64_t mask, uint64_t value)
 {

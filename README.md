@@ -97,7 +97,7 @@ make binpigpio
 
 ## Stubbed Target
 PiLoRa can still be tested without Raspberry Pi using the stubbed target.
-Stubbed target will open udp socket at 0.0.0.0:8888 for rx and will send upd packet to localhost:8881 for tx.
+Stubbed target will open udp socket at 0.0.0.0:8888 for LoRa RX or will send upd packet to localhost:8889 for LoRa TX,
 
 ## Pigpio Target
 PiLoRa is linked with pigpio. PiLoRa will use the SPI and GPIO in pigpio.
