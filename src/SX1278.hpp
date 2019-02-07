@@ -169,7 +169,7 @@ public:
             using namespace std::chrono_literals;
             std::unique_lock<std::mutex> lock(pTxDoneMutex);
             // TODO: Configurable TX TIMEOUT
-            pTxDoneCv.wait_for(lock, 1s, [this]{return pTxDone;});
+            pRxTxDoneCv.wait_for(lock, 1s, [this]{return pTxDone;});
             if (!pTxDone)
             {
                 mLogger << logger::ERROR << "tx timeout";
@@ -188,15 +188,16 @@ public:
         {
             // TODO: Configurable RX TIMEOUT
             using namespace std::chrono_literals;
-            pTxDoneCv.wait_for(lock, 5s, [this]{return bufferQueue.size();});
+            pRxTxDoneCv.wait_for(lock, 10s, [this]{return bufferQueue.size();});
         }
 
-        if (bufferQueue.size())
+        if (!bufferQueue.size())
         {
             mLogger << logger::ERROR << "rx timeout";
             return {};
         }
 
+        // TODO: Buffer
         common::Buffer rv = std::move(bufferQueue.front());
         bufferQueue.pop_front();
         return rv;
@@ -240,19 +241,23 @@ private:
         // 4.1.6.    LoRa Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
         setRegister(REGFIFOTXBASEADD, 0);
         setRegister(REGFIFORXBASEADD, 0);
+        setRegister(REGFIFORXCURRENTADDR, 0);
     }
 
     void onDio1()
     {
+        
         if (Usage::RXC == mUsage)
         {
+            mLogger << logger::DEBUG << "RX DONE!! ";
             // TODO: ANNOTATE SPECS
             setRegister(REGFIFOADDRPTR, 0);
             // TODO: GetFifoData(RxByte+RxSize) and push to buffer
+            // TODO: not really REGRXNBBYTES
             uint8_t rcvSz = getRegister(REGRXNBBYTES) + getRegister(REGFIFORXBYTEADDR);
             uint8_t wro[257];
             uint8_t wri[257];
-            wro[1] = REGFIFO;
+            wro[0] = REGFIFO;
             mSpi.xfer(wro, wri, 1+rcvSz);
             common::Buffer pvect(new std::byte[rcvSz], size_t(rcvSz));
             std::memcpy(pvect.data(), wri+1, rcvSz);
@@ -262,15 +267,18 @@ private:
                 bufferQueue.push_back(std::move(pvect));
             }
 
+            pRxTxDoneCv.notify_one();
+            setRegister(REGFIFORXCURRENTADDR, 0);
             bufferQueueCv.notify_one();
         }
         else
         {
+            mLogger << logger::DEBUG << "TX DONE!!";
             {
                 std::unique_lock<std::mutex> lock(pTxDoneMutex);
                 pTxDone = true;
             }
-            pTxDoneCv.notify_one();
+            pRxTxDoneCv.notify_one();
         }
     }
 
@@ -278,7 +286,7 @@ private:
     std::mutex bufferQueueMutex;
     std::deque<common::Buffer> bufferQueue;
 
-    std::condition_variable pTxDoneCv{};
+    std::condition_variable pRxTxDoneCv{};
     std::mutex pTxDoneMutex;
     bool pTxDone{};
 

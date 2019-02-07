@@ -26,6 +26,7 @@ struct ISocket
     virtual void bind(const IpPort& pAddr) = 0;
     virtual ssize_t sendto(const common::Buffer& pData, const IpPort& pAddr, int pFlags=0) = 0;
     virtual ssize_t recvfrom(common::Buffer& pData, IpPort& pAddr, int pFlags=0) = 0;
+    virtual void setsockopt(int pLevel, int pOptionName, const void *pOptionValue, socklen_t pOptionLen) = 0;
 };
 
 struct IUdpFactory
@@ -87,6 +88,16 @@ public:
         pAddr.addr = ntohl(framddr.sin_addr.s_addr);
         pAddr.port = ntohs(framddr.sin_port);
         return sz;
+    }
+
+    void setsockopt(int pLevel, int pOptionName, const void *pOptionValue, socklen_t pOptionLen)
+    {
+        int rv = ::setsockopt(mSockFd, pLevel, pOptionName, pOptionValue, pOptionLen);
+        if (rv < 0)
+        {
+            std::string err = std::string("Setsockopt failed: ") + std::to_string(rv) + " Error: " + strerror(errno);
+            throw std::runtime_error(err);
+        }
     }
 
 private:

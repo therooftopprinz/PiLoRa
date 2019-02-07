@@ -328,7 +328,14 @@ public:
 private:
     void runRx()
     {
-        // mModule.receive();
+        while (1)
+        {
+            common::Buffer received = mModule.rx();
+            if (received.size())
+            {
+                mIoSock->sendto(received, mIoAddr);
+            }
+        }
     }
 
     void runTx()
@@ -336,8 +343,8 @@ private:
         common::Buffer recvbuffer(new std::byte[1024], 1024);
         while (1)
         {
-            net::IpPort dst;
-            auto sz = mIoSock->recvfrom(recvbuffer, dst);
+            net::IpPort src;
+            auto sz = mIoSock->recvfrom(recvbuffer, src);
             mModule.tx((uint8_t*)recvbuffer.data(), sz);
         }
     }
