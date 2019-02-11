@@ -12,7 +12,7 @@ using namespace flylora_sx127x;
 
 inline void printHex(const uint8_t* pData, size_t size)
 {
-    std::cout <<  "printHex(" << size << "): ";
+    std::cout <<  "printHex(@" << (void*) pData << ", " << size << "): ";
     for (size_t i=0; i<size; i++)
     {
         std::cout << std::hex << std::setw(2) << std::setfill('0') << unsigned(pData[i]);
@@ -77,6 +77,10 @@ struct SX1278Tests : Test
         // REGFIFORXBASEADD
         static uint8_t startFifoRxBaseAddr[] = { uint8_t(0x80|REGFIFORXBASEADD), 0 };
         EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startFifoRxBaseAddr, 2), _, 2)).Times(1).RetiresOnSaturation();
+        
+        // REGFIFORXCURRENTADDR
+        static uint8_t startFifoRxCurrentAddr[] = { uint8_t(0x80|REGFIFORXCURRENTADDR), 0 };
+        EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startFifoRxCurrentAddr, 2), _, 2)).Times(1).RetiresOnSaturation();
     }
 
     void TearDown()

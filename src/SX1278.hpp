@@ -69,9 +69,13 @@ public:
         // TODO: DO DetectionOptimize - SX1276/77/78 Errata fixes
         pCf = (pCf*524288ul)/mFosc;
 
-        setRegister(REGFRLSB, pCf&0xFF);
-        setRegister(REGFRMID, (pCf>>8)&0xFF);
-        setRegister(REGFRMSB, (pCf>>16)&0xFF);
+        mFrLsb = pCf&0xFF;
+        mFrMid = (pCf>>8)&0xFF;
+        mFrMsb = (pCf>>16)&0xFF;
+
+        setRegister(REGFRLSB, mFrLsb);
+        setRegister(REGFRMID, mFrMid);
+        setRegister(REGFRMSB, mFrMsb);
     }
 
     uint32_t getCarrier()
@@ -100,6 +104,10 @@ public:
         uint8_t config2 = setMasked(SPREADINGFACTORMASK, uint8_t(pSpreadingFactor));
         uint8_t config3 = (uint8_t(pSpreadingFactor) >= uint8_t(SpreadingFactor::SF_11) ? LOWDATARATEOPTIMIZEMASK : 0); // DEFAULT LNA GAIN IS G1
 
+        mModemConfig1 = config1;
+        mModemConfig2 = config2;
+        mModemConfig3 = config3;
+
         setRegister(REGMODEMCONFIG1, config1);
         setRegister(REGMODEMCONFIG2, config2);
         setRegister(REGMODEMCONFIG3, config3);
@@ -121,6 +129,7 @@ public:
                     setMasked(MAXPOWERMASK, 7) |
                     setMasked(OUTPUTPOWERMASK, power));
 
+        mPaConfig = paConfig;
         setRegister(REGPACONFIG, paConfig);
     }
 
@@ -143,6 +152,23 @@ public:
     {
         // 5.5.5.  RSSI and SNR in LoRa Mode - SX1276/77/78/79 DATASHEET
         return -164+getRegister(REGPKTRSSIVALUE);
+    }
+
+    int getLastSnr()
+    {
+        // TODO: lookup
+        return 0;
+    }
+
+    bool validate()
+    {
+        return mFrLsb == getRegister(REGFRLSB) &&
+        mFrMid == getRegister(REGFRMID) &&
+        mFrMsb == getRegister(REGFRMSB) &&
+        mModemConfig1 == getRegister(REGMODEMCONFIG1) &&
+        mModemConfig2 == getRegister(REGMODEMCONFIG2) &&
+        mModemConfig3 == getRegister(REGMODEMCONFIG3) &&
+        mPaConfig == getRegister(REGPACONFIG);
     }
 
     int tx(const uint8_t *pData, uint8_t pSize)
@@ -246,7 +272,6 @@ private:
 
     void onDio1()
     {
-        
         if (Usage::RXC == mUsage)
         {
             mLogger << logger::DEBUG << "RX DONE!! ";
@@ -289,6 +314,14 @@ private:
     std::condition_variable pRxTxDoneCv{};
     std::mutex pTxDoneMutex;
     bool pTxDone{};
+
+    uint8_t mFrLsb;
+    uint8_t mFrMid;
+    uint8_t mFrMsb;
+    uint8_t mModemConfig1;
+    uint8_t mModemConfig2;
+    uint8_t mModemConfig3;
+    uint8_t mPaConfig;
 
     uint32_t mFosc = 32000000ul;
     unsigned mResetPin{};

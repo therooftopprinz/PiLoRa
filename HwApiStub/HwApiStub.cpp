@@ -220,7 +220,7 @@ private:
     {
         // std::stringstream ss;
         // ss << "READ  " << std::setw(24) << std::left << flylora_sx127x::regIndexToString(pReg) << " = 0x" <<
-        //     std::hex << std::setw(2) << std::right << std::setfill('0') << unsigned(mRegs[pReg]);
+            // std::hex << std::setw(2) << std::right << std::setfill('0') << unsigned(mRegs[pReg]);
         // TODO: IMPROVE LOGGER
         // mLogger << logger::DEBUG << ss.str();
         return mRegs[pReg];
