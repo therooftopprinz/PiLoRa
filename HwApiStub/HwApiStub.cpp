@@ -75,6 +75,7 @@ public:
         , mLogger(std::string("Sx1278SpiStub[")+std::to_string(pChannel)+"]")
     {
         mSocket.bind(net::toIpPort(127,0,0,1, 8888));
+        setValue(flylora_sx127x::REGVERSION, 0x12);
     }
 
     int read(uint8_t *, unsigned)
@@ -90,6 +91,8 @@ public:
         // mLogger << logger::DEBUG << " xfer[" << pCount << "]: " << toHexString(pDataOut, pCount);
         bool isWrite = 0x80&pDataOut[0];
         uint8_t reg = 0x7F&pDataOut[0];
+
+        // TODO: FOR WRITE OPERATION DATA IN IS OLD REG VALUE
         std::memcpy(pDataIn+1, pDataOut+1, pCount-1);
 
         if (isWrite)
@@ -108,23 +111,42 @@ private:
     void loraRx()
     {
         timeval tv{};
-        tv.tv_sec = 5;
-        tv.tv_usec = 0; // 10 ms
+        tv.tv_sec = 5; // 5s
+        tv.tv_usec = 0;
         mSocket.setsockopt(SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(timeval));
         mLoRaRxActive = true;
+        std::byte buffer[256];
+        common::Buffer data(buffer, 256, false);
         while (mLoRaRxActive)
         {
-            auto fifoRxBase = getValue(flylora_sx127x::REGFIFORXBASEADD);
-            auto fifoRxCurrent = getValue(flylora_sx127x::REGFIFORXCURRENTADDR);
-            size_t maxsize = 256-(fifoRxBase+fifoRxCurrent);
-            common::Buffer data((std::byte*)(mFifo + fifoRxBase + fifoRxCurrent), maxsize, false);
+            auto fifoRxTop = getValue(flylora_sx127x::REGFIFORXBYTEADDR);
+            ssize_t maxsize = 256-fifoRxTop;
             net::IpPort src;
             auto rc = mSocket.recvfrom(data, src);
-            if (rc > 0)
+            mLogger << logger::DEBUG << "LORA RX[" << rc << "] (UDP IN)";
+            if (rc < 0)
             {
-                mLogger << logger::DEBUG << "LORA RX[" << rc << "]";
+                mLogger << logger::ERROR << "ERRNO: " << strerror(errno);
+            }
+            else if (rc > 0)
+            {
+                // TODO: DETERMINE IF THIS IS CORRECT BEHAVIOR
+                if (rc >= maxsize)
+                {
+                    std::memcpy(mFifo + fifoRxTop, data.data(), maxsize);
+                    if (size_t remSize = rc-maxsize)
+                    {
+                        std::memcpy(mFifo, data.data()+maxsize, remSize);
+                    }
+                }
+                else
+                {
+                    std::memcpy(mFifo + fifoRxTop, data.data(), rc);
+                }
+
                 setValue(flylora_sx127x::REGRXNBBYTES, rc);
-                setValue(flylora_sx127x::REGFIFORXCURRENTADDR, fifoRxCurrent+rc);
+                setValue(flylora_sx127x::REGFIFORXCURRENTADDR, fifoRxTop);
+                setValue(flylora_sx127x::REGFIFORXBYTEADDR, fifoRxTop+rc);
                 std::static_pointer_cast<GpioStub>(getGpio())->cb(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
             }
         }
@@ -132,6 +154,14 @@ private:
 
     void regwrite(uint8_t pReg, uint8_t *pDataOut, uint8_t *, unsigned pCount)
     {
+
+        auto mode = static_cast<flylora_sx127x::Mode>(flylora_sx127x::getUnmasked(flylora_sx127x::MODEMASK, getValue(flylora_sx127x::REGOPMODE)));
+        if (pReg!=flylora_sx127x::REGOPMODE &&
+            !( mode== flylora_sx127x::Mode::STDBY || mode==flylora_sx127x::Mode::SLEEP))
+        {
+            throw std::runtime_error("WRITE WHILE NOT IN SLEEP OR STANDBY MODE!!");
+        }
+
         // TODO: DATAIN VALIDATION
         uint regVal = pDataOut[1];
         auto oldValue = getValue(pReg);
@@ -140,13 +170,15 @@ private:
         {
             case flylora_sx127x::REGFIFO:
             {
+                auto fifoCount = pCount-1;
                 auto fifoIdx = getValue(flylora_sx127x::REGFIFOADDRPTR);
-                mLogger << logger::DEBUG << "FIFO WRITE[" << pCount << "]: " << toHexString(pDataOut+1, pCount-1);
                 if (fifoIdx+pCount > 256)
                 {
                     throw std::runtime_error("FIFO OVERRUN!!");
                 }
-                std::memcpy(mFifo+fifoIdx, pDataOut+1, pCount-1);
+                mLogger << logger::DEBUG << "FIFO WRITE[" << fifoCount << "]: " << toHexString(pDataOut+1, fifoCount);
+                std::memcpy(mFifo+fifoIdx, pDataOut+1, fifoCount);
+                setValue(flylora_sx127x::REGFIFOADDRPTR, fifoIdx+fifoCount);
                 break;
             }
             case flylora_sx127x::REGOPMODE:
@@ -178,6 +210,7 @@ private:
                 }
                 else if (flylora_sx127x::Mode::RXCONTINUOUS == mode)
                 {
+                    // TODO: reset rx fifo regs
                     mLoRaRxThread = std::thread(&Sx1278SpiStub::loraRx, this);
                 }
 
@@ -192,14 +225,16 @@ private:
         {
             case flylora_sx127x::REGFIFO:
             {
+                auto fifoCount = pCount-1;
                 auto fifoIdx = getValue(flylora_sx127x::REGFIFOADDRPTR);
-                if (fifoIdx+pCount > 256)
+                if (fifoIdx+fifoCount > 256)
                 {
                     throw std::runtime_error("FIFO OVERRUN!!");
                 }
-                std::memcpy(pDataOut+1, mFifo+fifoIdx, pCount-1);
-                std::memcpy(pDataIn+1, mFifo+fifoIdx, pCount-1);
-                mLogger << logger::DEBUG << "FIFO READ[" << pCount << "]: " << toHexString(pDataOut+1, pCount-1);
+                std::memcpy(pDataOut+1, mFifo+fifoIdx, fifoCount);
+                std::memcpy(pDataIn+1, mFifo+fifoIdx, fifoCount);
+                mLogger << logger::DEBUG << "FIFO READ[" << fifoCount << "]@" << unsigned(fifoIdx) << ": " << toHexString(pDataOut+1, fifoCount);
+                setValue(flylora_sx127x::REGFIFOADDRPTR, fifoIdx+fifoCount);
                 break;
             }
             default:
@@ -242,8 +277,8 @@ private:
         mRegs[pReg] = pValue;
     }
 
-    uint8_t mRegs[128];
-    uint8_t mFifo[256];
+    uint8_t mRegs[128]{};
+    uint8_t mFifo[256]{};
     int mChannel;
     std::thread mLoRaRxThread;
     bool mLoRaRxActive;

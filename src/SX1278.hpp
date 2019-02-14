@@ -35,7 +35,8 @@ public:
     ~SX1278()
     {
         mGpio.deregisterCallback(mDio1CbId);
-        bufferQueueCv.notify_one();
+        mTeardown = true;
+        mRxTxDoneCv.notify_one();
     }
 
     void resetModule()
@@ -142,10 +143,17 @@ public:
     {
         if (Usage::RXC == mUsage)
         {
+            setRegister(REGFIFOADDRPTR, 0);
             setMode(Mode::RXCONTINUOUS);
             return;
         }
         standby();
+    }
+
+    int getLastSnr()
+    {
+        // 5.5.5.  RSSI and SNR in LoRa Mode - SX1276/77/78/79 DATASHEET
+        return getRegister(REGPKTSNRVALUE);
     }
 
     int getLastRssi()
@@ -154,14 +162,19 @@ public:
         return -164+getRegister(REGPKTRSSIVALUE);
     }
 
-    int getLastSnr()
+    int getCurrentRssi()
     {
-        // TODO: lookup
-        return 0;
+        // 5.5.5.  RSSI and SNR in LoRa Mode - SX1276/77/78/79 DATASHEET
+        return -164+getRegister(REGRSSIVALUE);
     }
 
     bool validate()
     {
+        if (0x12 != getRegister(REGVERSION))
+        {
+            throw std::runtime_error("Invalid chip version!");
+        }
+
         return mFrLsb == getRegister(REGFRLSB) &&
         mFrMid == getRegister(REGFRMID) &&
         mFrMsb == getRegister(REGFRMSB) &&
@@ -193,15 +206,15 @@ public:
         setMode(Mode::TX);
         {
             using namespace std::chrono_literals;
-            std::unique_lock<std::mutex> lock(pTxDoneMutex);
+            std::unique_lock<std::mutex> lock(mTxDoneMutex);
             // TODO: Configurable TX TIMEOUT
-            pRxTxDoneCv.wait_for(lock, 1s, [this]{return pTxDone;});
-            if (!pTxDone)
+            mRxTxDoneCv.wait_for(lock, 1s, [this]{return mTxDone||mTeardown;});
+            if (!mTxDone)
             {
                 mLogger << logger::ERROR << "tx timeout";
                 return -1;
             }
-            pTxDone = false;
+            mTxDone = false;
         }
         return pSize;
     }
@@ -214,7 +227,7 @@ public:
         {
             // TODO: Configurable RX TIMEOUT
             using namespace std::chrono_literals;
-            pRxTxDoneCv.wait_for(lock, 10s, [this]{return bufferQueue.size();});
+            mRxTxDoneCv.wait_for(lock, 10s, [this]{return bufferQueue.size()||mTeardown;});
         }
 
         if (!bufferQueue.size())
@@ -223,7 +236,6 @@ public:
             return {};
         }
 
-        // TODO: Buffer
         common::Buffer rv = std::move(bufferQueue.front());
         bufferQueue.pop_front();
         return rv;
@@ -274,46 +286,64 @@ private:
     {
         if (Usage::RXC == mUsage)
         {
-            mLogger << logger::DEBUG << "RX DONE!! ";
+            mLogger << logger::DEBUG << "RX DONE \\";
             // TODO: ANNOTATE SPECS
-            setRegister(REGFIFOADDRPTR, 0);
-            // TODO: GetFifoData(RxByte+RxSize) and push to buffer
-            // TODO: not really REGRXNBBYTES
-            uint8_t rcvSz = getRegister(REGRXNBBYTES) + getRegister(REGFIFORXBYTEADDR);
+            // TODO: what value in implicit header
+            uint8_t rcvSz = getRegister(REGRXNBBYTES);
+            auto currRx = getRegister(REGFIFORXCURRENTADDR);
+            common::Buffer pvect(new std::byte[rcvSz], size_t(rcvSz));
+            ssize_t maxsize = 256-currRx;
             uint8_t wro[257];
             uint8_t wri[257];
             wro[0] = REGFIFO;
-            mSpi.xfer(wro, wri, 1+rcvSz);
-            common::Buffer pvect(new std::byte[rcvSz], size_t(rcvSz));
-            std::memcpy(pvect.data(), wri+1, rcvSz);
+
+            // TODO: DETERMINE IF THIS IS CORRECT BEHAVIOR
+            if (rcvSz>=maxsize)
+            {
+                mLogger << logger::WARNING << "FIFO AT: " << unsigned(getRegister(REGFIFOADDRPTR));
+                mSpi.xfer(wro, wri, 1+maxsize);
+                std::memcpy(pvect.data(), wri+1, maxsize);
+                if (size_t remSize = rcvSz-maxsize)
+                {
+                    mLogger << logger::WARNING << "FIFO AT: " << unsigned(getRegister(REGFIFOADDRPTR));
+                    mSpi.xfer(wro, wri, 1+remSize);
+                    std::memcpy(pvect.data()+maxsize, wri+1, remSize);
+                }
+            }
+            else
+            {
+                mSpi.xfer(wro, wri, 1+rcvSz);
+                std::memcpy(pvect.data(), wri+1, rcvSz);
+                mLogger << logger::DEBUG << "FIFO AT: " << unsigned(getRegister(REGFIFOADDRPTR));
+            }
+
 
             {
                 std::unique_lock<std::mutex> lock(bufferQueueMutex);
                 bufferQueue.push_back(std::move(pvect));
             }
 
-            pRxTxDoneCv.notify_one();
-            setRegister(REGFIFORXCURRENTADDR, 0);
-            bufferQueueCv.notify_one();
+            mRxTxDoneCv.notify_one();
+            mLogger << logger::DEBUG << "RX DONE /";
         }
         else
         {
             mLogger << logger::DEBUG << "TX DONE!!";
             {
-                std::unique_lock<std::mutex> lock(pTxDoneMutex);
-                pTxDone = true;
+                std::unique_lock<std::mutex> lock(mTxDoneMutex);
+                mTxDone = true;
             }
-            pRxTxDoneCv.notify_one();
+            mRxTxDoneCv.notify_one();
         }
     }
 
-    std::condition_variable bufferQueueCv;
+    bool mTeardown = false;
     std::mutex bufferQueueMutex;
     std::deque<common::Buffer> bufferQueue;
 
-    std::condition_variable pRxTxDoneCv{};
-    std::mutex pTxDoneMutex;
-    bool pTxDone{};
+    std::condition_variable mRxTxDoneCv{};
+    std::mutex mTxDoneMutex;
+    bool mTxDone{};
 
     uint8_t mFrLsb;
     uint8_t mFrMid;
