@@ -282,8 +282,6 @@ App::App(net::IUdpFactory& pUdpFactory, const Args& pArgs)
     {
         mIoSock->bind({});
     }
-
-    hwapi::Setup();
 }
 
 int App::run()
@@ -300,6 +298,10 @@ int App::run()
         mModule.setCarrier(mCarrier);
         mModule.configureModem(mBw, mCr, false, mSf);
         mModule.setOutputPower(mTxPower);
+        {
+            using namespace std::literals::chrono_literals;
+            std::this_thread::sleep_for(100ms); // sx1278 configuration grace period
+        }
         if (mModule.validate())
         {
             validated = true;

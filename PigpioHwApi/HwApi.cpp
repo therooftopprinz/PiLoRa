@@ -1,6 +1,7 @@
 #include <IHwApi.hpp>
 #include <exception>
 #include <pigpiod_if2.h>
+#include <Logger.hpp>
 
 namespace hwapi
 {
@@ -12,6 +13,7 @@ class Spi : public ISpi
 public:
     Spi(uint8_t pChannel)
     {
+        logger << logger::DEBUG << "opening spi channel="<< unsigned(pChannel) << " for gpio=" << gGpioHandle;
         mHandle  = spi_open(gGpioHandle, pChannel, 57600,
             //bbbbbbRTnnnnWAuuupppmm
             0b0000000000000000000000);
@@ -43,6 +45,7 @@ public:
     }
 private:
     int mHandle;
+    logger::Logger logger = logger::Logger("hwapi::Spi");    
 };
 
 class Gpio : public IGpio
@@ -103,12 +106,14 @@ std::shared_ptr<IGpio> getGpio()
 
 void setup()
 {
+    logger::Logger logger("hwapi::setup");
     char port[] = {'7','7','7','7',0};
     gGpioHandle = pigpio_start(nullptr, port);
     if (gGpioHandle<0)
     {
         throw std::runtime_error(std::string{} + "connecting to pigpiod failed! handle=" + std::to_string(gGpioHandle));
     }
+    logger << logger::DEBUG << "gpiohandle="<<gGpioHandle;
 }
 
 void teardown()
