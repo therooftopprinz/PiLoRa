@@ -282,6 +282,8 @@ App::App(net::IUdpFactory& pUdpFactory, const Args& pArgs)
     {
         mIoSock->bind({});
     }
+
+    hwapi::Setup();
 }
 
 int App::run()

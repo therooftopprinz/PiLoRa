@@ -78,21 +78,24 @@ TEST_SOURCES = []
 SRC_SOURCES  = []
 STUB_SOURCES  = []
 
-p = subprocess.Popen('cd '+TLD+'test       && find .             | egrep \'\.cpp$\'', shell=True, stdout=subprocess.PIPE)
-q = subprocess.Popen('cd '+TLD+'src        && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
-r = subprocess.Popen('cd '+TLD+'HwApiStub  && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
-s = subprocess.Popen('cd '+TLD+'common     && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
+p = subprocess.Popen('cd '+TLD+'test        && find .             | egrep \'\.cpp$\'', shell=True, stdout=subprocess.PIPE)
+q = subprocess.Popen('cd '+TLD+'src         && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
+r = subprocess.Popen('cd '+TLD+'HwApiStub   && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
+s = subprocess.Popen('cd '+TLD+'common      && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
+u = subprocess.Popen('cd '+TLD+'PigpioHwApi && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
 
 TEST_SOURCES = clean_filenames(p.stdout.readlines())
 SRC_SOURCES  = clean_filenames(q.stdout.readlines())
 STUB_SOURCES  = clean_filenames(r.stdout.readlines())
 COMMON_SOURCES  = clean_filenames(s.stdout.readlines())
+PIGPIO_SOURCES  = clean_filenames(u.stdout.readlines())
 
 
 print "TEST_SOURCES", TEST_SOURCES
 print "SRC_SOURCES", SRC_SOURCES
 print "SRC_SOURCES", STUB_SOURCES
 print "COMMON_SOURCES", COMMON_SOURCES
+print "PIGPIO_SOURCES", PIGPIO_SOURCES
 
 gtest = Build()
 gtest.set_cxxflags(CXXFLAGS)
@@ -115,9 +118,17 @@ common.set_src_dir(TLD+'common/')
 common.add_src_files(COMMON_SOURCES)
 common.target_archive('common.a')
 
+pigpiohwApi = Build()
+pigpiohwApi.set_cxxflags(CXXFLAGS)
+pigpiohwApi.add_include_paths(['HwApi/', 'common/', 'src/'])
+pigpiohwApi.set_src_dir(TLD+'PigpioHwApi/')
+pigpiohwApi.add_src_files(PIGPIO_SOURCES)
+pigpiohwApi.target_archive('pigpiohwapi.a')
+
+
 hwapistub = Build()
 hwapistub.set_cxxflags(CXXFLAGS)
-hwapistub.add_include_paths(['HwApiStub', 'HwApi/', 'common/', 'src/'])
+hwapistub.add_include_paths(['HwApi/', 'common/', 'src/'])
 hwapistub.set_src_dir(TLD+'HwApiStub/')
 hwapistub.add_src_files(STUB_SOURCES)
 hwapistub.target_archive('stub.a')
@@ -133,17 +144,29 @@ test.target_executable('test')
 
 binstub = Build()
 binstub.set_cxxflags(CXXFLAGS)
-binstub.add_include_paths(['src/', 'HwApi/', 'HwApiStub/', 'common/'])
+binstub.add_include_paths(['src/', 'HwApi/', 'common/'])
 binstub.set_src_dir(TLD+'src/')
 binstub.add_src_files(["main.cpp"])
 binstub.add_dependencies(['src.a', 'stub.a', 'common.a'])
 binstub.set_linkflags("-lpthread")
 binstub.target_executable('binstub')
 
+binpigpio = Build()
+binpigpio.set_cxxflags(CXXFLAGS)
+binpigpio.add_include_paths(['src/', 'HwApi/', 'HwApi/', 'common/'])
+binpigpio.set_src_dir(TLD+'src/')
+binpigpio.add_src_files(["main.cpp"])
+binpigpio.add_dependencies(['src.a', 'pigpiohwapi.a', 'common.a'])
+binpigpio.set_linkflags("-lpthread -lpigpiod_if2")
+binpigpio.target_executable('binpigpio')
+
+
 with open('Makefile','w+') as mf:
     mf.write(gtest.generate_make())
     mf.write(test.generate_make())
     mf.write(src.generate_make())
     mf.write(common.generate_make())
+    mf.write(pigpiohwApi.generate_make())
     mf.write(hwapistub.generate_make())
     mf.write(binstub.generate_make())
+    mf.write(binpigpio.generate_make())
