@@ -28,7 +28,5 @@ int main(int argc, const char* argv[])
     app::Args args(options);
     hwapi::setup();
     app::App app(*udpFactory, args);
-    auto rv = app.run();
-    logger::LoggerServer::getInstance().waitEmpty();
-    return rv;
+    return app.run();
 }
