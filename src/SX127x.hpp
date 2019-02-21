@@ -366,15 +366,24 @@ constexpr uint8_t REGSYNCWORD               = 0x39; // LoRa Sync Word
 // RegDioMapping1               0x40
 constexpr uint8_t REGDIOMAPPING1            = 0x40; // DIO Mapping for DIO3:DIO0
 
-enum class DioMapping1
-{
-    CadDone_FhssChangeChannel_RxTimeout_RxDone,
-    ValidHeader_FhssChangeChannel_FhssChangeChannel_TxDone,
-    PayloadCrcError_FhssChangeChannel_CadDetected_CadDone
-};
-
 // RegDioMapping2               0x41
 constexpr uint8_t REGDIOMAPPING2            = 0x41; // DIO Mapping for DIO5:DIO4
+
+//                                                           D0D1D2D3
+constexpr uint8_t DIO0RXDONEMASK            = 0b00000000; // 00------
+constexpr uint8_t DIO0TXDONEMASK            = 0b01000000; // 01------
+constexpr uint8_t DIO0CADDONEMASK           = 0b10000000; // 10------
+constexpr uint8_t DIO0NOPMASK               = 0b10000000; // 11------
+constexpr uint8_t DIO1RXTOUTMASK            = 0b00000000; // --00----
+constexpr uint8_t DIO1FHSSCHANGECHANNELMASK = 0b00010000; // --01----
+constexpr uint8_t DIO1CADDETECTEDMASK       = 0b00100000; // --10----
+constexpr uint8_t DIO1NOPMASK               = 0b00110000; // --11----
+constexpr uint8_t DIO2FHSSCHANGECHANNELMASK = 0b00000000; // ----00--
+constexpr uint8_t DIO2NOPMASK               = 0b00001100; // ----11--
+constexpr uint8_t DIO3CADDONEMASK           = 0b00000000; // ------00
+constexpr uint8_t DIO3VALIDHEADERMASK       = 0b00000001; // ------01
+constexpr uint8_t DIO3PAYLOADCRCMASK        = 0b00000010; // ------10
+constexpr uint8_t DIO3NOPMASK               = 0b00000011; // ------11
 
 enum class DioMapping2
 {

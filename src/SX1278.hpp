@@ -54,12 +54,14 @@ public:
     {
         mUsage = pUsage;
         // 4.1.6.1.  Digital IO Pin Mapping - SX1276/77/78/79 DATASHEET
-        DioMapping1 dioMapping = DioMapping1::CadDone_FhssChangeChannel_RxTimeout_RxDone;
         if (Usage::TX == mUsage)
         {
-            dioMapping = DioMapping1::ValidHeader_FhssChangeChannel_FhssChangeChannel_TxDone;
+            setRegister(REGDIOMAPPING1, DIO0TXDONEMASK);
         }
-        setRegister(REGDIOMAPPING1, uint8_t(dioMapping));
+        else
+        {
+            setRegister(REGDIOMAPPING1, DIO0RXDONEMASK);
+        }
     }
 
     void setCarrier(uint64_t pCf)
@@ -191,7 +193,7 @@ public:
             return -1;
         }
 
-        setRegister(REGDIOMAPPING1, uint8_t(DioMapping1::ValidHeader_FhssChangeChannel_FhssChangeChannel_TxDone));
+        setRegister(REGDIOMAPPING1, 0x40);
 
         // 4.1.6.  LoRaTM Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
         // TODO: ANNOTATE SPECS
@@ -212,7 +214,7 @@ public:
             using namespace std::chrono_literals;
             std::unique_lock<std::mutex> lock(mTxDoneMutex);
             // TODO: Configurable TX TIMEOUT
-            mRxTxDoneCv.wait_for(lock, 1ms, [this]{return mTxDone||mTeardown;});
+            mRxTxDoneCv.wait_for(lock, 1s, [this]{return mTxDone||mTeardown;});
             getRegister(REGOPMODE);
             setRegister(REGIRQFLAGS, 0xFF);
             if (!mTxDone)
