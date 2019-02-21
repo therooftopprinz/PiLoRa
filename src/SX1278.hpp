@@ -62,7 +62,7 @@ public:
         setRegister(REGDIOMAPPING1, uint8_t(dioMapping));
     }
 
-    void setCarrier(uint32_t pCf)
+    void setCarrier(uint64_t pCf)
     {
         // 4.1.4.  Frequency Settings - SX1276/77/78/79 DATASHEET
         // 6.4.    LoRa Mode Register Map - SX1276/77/78/79 DATASHEET
@@ -83,7 +83,7 @@ public:
     {
         // 4.1.4.  Frequency Settings - SX1276/77/78/79 DATASHEET
         // 6.4.    LoRa Mode Register Map - SX1276/77/78/79 DATASHEET
-        uint32_t cf = 0;
+        uint64_t cf = 0;
         cf |= getRegister(REGFRLSB);
         cf |= getRegister(REGFRMID)<<8;
         cf |= getRegister(REGFRMSB)<<16;
@@ -191,6 +191,8 @@ public:
             return -1;
         }
 
+        setRegister(REGDIOMAPPING1, uint8_t(DioMapping1::ValidHeader_FhssChangeChannel_FhssChangeChannel_TxDone));
+
         // 4.1.6.  LoRaTM Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
         // TODO: ANNOTATE SPECS
         setRegister(REGPAYLOADLENGTH, pSize);
@@ -204,11 +206,15 @@ public:
         mSpi.xfer(wro, wri, 1+pSize);
 
         setMode(Mode::TX);
+        getRegister(REGOPMODE);
+
         {
             using namespace std::chrono_literals;
             std::unique_lock<std::mutex> lock(mTxDoneMutex);
             // TODO: Configurable TX TIMEOUT
-            mRxTxDoneCv.wait_for(lock, 1s, [this]{return mTxDone||mTeardown;});
+            mRxTxDoneCv.wait_for(lock, 1ms, [this]{return mTxDone||mTeardown;});
+            getRegister(REGOPMODE);
+            setRegister(REGIRQFLAGS, 0xFF);
             if (!mTxDone)
             {
                 mLogger << logger::ERROR << "tx timeout";
@@ -271,10 +277,12 @@ private:
     void init()
     {
         mUsage = Usage::UNSPEC;
+        setRegister(REGOPMODE, 0); // Sleep Mode
+        setRegister(REGOPMODE, LONGRANGEMODEMASK | LOWFREQUENCYMODEONMASK); // Set LoRa
         standby();
         // 4.1.2.4.  Interrupts in LoRa Mode - SX1276/77/78/79 DATASHEET
-        uint8_t interruptMask = TXDONEMASKMASK | RXDONEMASKMASK;
-        setRegister(REGIRQFLAGSMASK, interruptMask);
+        // uint8_t interruptMask = TXDONEMASKMASK | RXDONEMASKMASK;
+        // setRegister(REGIRQFLAGSMASK, ~interruptMask);
         // 4.1.2.3.  LoRa Mode FIFO Data Buffer - SX1276/77/78/79 DATASHEET
         // 4.1.6.    LoRa Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
         setRegister(REGFIFOTXBASEADD, 0);
@@ -335,6 +343,7 @@ private:
             }
             mRxTxDoneCv.notify_one();
         }
+        setRegister(REGIRQFLAGS, 0xFF);
     }
 
     bool mTeardown = false;

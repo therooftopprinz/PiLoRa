@@ -261,7 +261,7 @@ App::App(net::IUdpFactory& pUdpFactory, const Args& pArgs)
         << (mIoAddr.port);
     mLogger << logger::DEBUG << "Carrier:         " << mCarrier << " Hz";
     mLogger << logger::DEBUG << "bandwidth:       " <<
-        ((const char*[]){"7.8", "10.4", "15.6", "20.8", "31.25", "41.7", "62.5", "125", "250", "500",})[int(mCr)] << " kHz";
+        ((const char*[]){"7.8", "10.4", "15.6", "20.8", "31.25", "41.7", "62.5", "125", "250", "500",})[int(mBw)] << " kHz";
     mLogger << logger::DEBUG << "Coding Rate:     " <<
         ((const char*[]){0, "4/5", "4/6", "4/7", "4/8"})[int(mCr)];
     mLogger << logger::DEBUG << "Spread Factor:   " <<

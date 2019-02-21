@@ -14,7 +14,7 @@ namespace hwapi
 {
 
 // TODO: put somewhere
-std::string toHexString(const uint8_t* pData, size_t size)
+inline std::string toHexString(const uint8_t* pData, size_t size)
 {
     std::stringstream ss;;
     for (size_t i=0; i<size; i++)

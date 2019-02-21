@@ -2,9 +2,22 @@
 #include <exception>
 #include <pigpiod_if2.h>
 #include <Logger.hpp>
+#include <iomanip>
+#include <SX127x.hpp>
 
 namespace hwapi
 {
+
+std::string toHexString(const uint8_t* pData, size_t size)
+{
+    std::stringstream ss;;
+    for (size_t i=0; i<size; i++)
+    {
+        ss << std::hex << std::setw(2) << std::setfill('0') << unsigned(pData[i]);
+    }
+
+    return ss.str();
+}
 
 static int gGpioHandle = -1;
 
@@ -41,11 +54,16 @@ public:
     }
     int xfer(uint8_t *dataOut, uint8_t *dataIn, unsigned count)
     {
-        return spi_xfer(gGpioHandle, mHandle, (char*)dataOut, (char*)dataIn, count);
+        auto rv = spi_xfer(gGpioHandle, mHandle, (char*)dataOut, (char*)dataIn, count);
+        auto regname = flylora_sx127x::regIndexToString(dataOut[0]&0x7f);
+        logger << logger::DEBUG << "SPI XFER REG" << (dataOut[0]&0x80 ? "WRITE" : "READ ") << " " << regname;
+        logger << logger::DEBUG << rv << " = OUT xfer[" << count << "]: " << toHexString(dataOut, count);
+        logger << logger::DEBUG << rv << " = IN  xfer[" << count << "]: " << toHexString(dataIn, count);
+        return rv;
     }
 private:
     int mHandle;
-    logger::Logger logger = logger::Logger("hwapi::Spi");    
+    logger::Logger logger = logger::Logger("hwapi::Spi");
 };
 
 class Gpio : public IGpio
@@ -58,15 +76,25 @@ public:
         {
             pinmode = PI_OUTPUT;
         }
-        return set_mode(gGpioHandle, pGpio, pinmode);
+        auto rv = set_mode(gGpioHandle, pGpio, pinmode);
+        logger << logger::DEBUG << rv << " = setMode(" << pGpio << ", " << (PinMode::OUTPUT==pMode? "OUTPUT" : "INPUT") << ")" ;
+
+        // logger << logger::DEBUG << set_noise_filter(gGpioHandle, pGpio, 1, 1) << " = set_noise_filter()";
+        // logger << logger::DEBUG << set_glitch_filter(gGpioHandle, pGpio, 1) << " = set_glitch_filter()";
+
+        return rv;
     }
     int get(unsigned pGpio)
     {
-        return gpio_read(gGpioHandle, pGpio);
+        auto rv = gpio_read(gGpioHandle, pGpio);
+        logger << logger::DEBUG << rv << "= get(" << pGpio << ")";
+        return rv;
     }
     int set(unsigned pGpio, unsigned pLevel)
     {
-        return gpio_write(gGpioHandle, pGpio, pLevel);
+        auto rv = gpio_write(gGpioHandle, pGpio, pLevel);
+        logger << logger::DEBUG << rv << "= set(" << pGpio << ", " << pLevel << ")";
+        return rv;
     }
     int registerCallback(unsigned pUserGpio, Edge pEdge, std::function<void(uint32_t tick)> pCb)
     {
@@ -77,7 +105,6 @@ public:
         }
 
         fnCb[pUserGpio] = pCb;
-
         return callback(gGpioHandle, pUserGpio, edge, &Gpio::cb);
     }
     int deregisterCallback(int pCallbackId)
@@ -87,10 +114,14 @@ public:
 private:
     static void cb(int pi, unsigned user_gpio, unsigned level, uint32_t tick)
     {
+        Gpio::logger << logger::DEBUG << "CHANGED! PIN[" << user_gpio << "]=" << level;
         fnCb[user_gpio](tick);
     }
+    static logger::Logger logger;
     static std::array<std::function<void(uint32_t tick)>, 20> fnCb;
 };
+
+logger::Logger Gpio::logger = logger::Logger("hwapi::Gpio");
 
 std::array<std::function<void(uint32_t tick)>, 20> Gpio::fnCb = {};
 
@@ -107,7 +138,7 @@ std::shared_ptr<IGpio> getGpio()
 void setup()
 {
     logger::Logger logger("hwapi::setup");
-    char port[] = {'7','7','7','7',0};
+    char port[] = {'8','8','8','8',0};
     gGpioHandle = pigpio_start(nullptr, port);
     if (gGpioHandle<0)
     {
