@@ -208,6 +208,7 @@ public:
         std::memcpy(wro+1, pData, pSize);
         mSpi.xfer(wro, wri, 1+pSize);
 
+        setRegister(REGIRQFLAGS, 0xFF);
         setMode(Mode::TX);
         {
             using namespace std::chrono_literals;
@@ -340,6 +341,7 @@ private:
             }
             mRxTxDoneCv.notify_one();
         }
+        setRegister(REGIRQFLAGS, 0xFF);
     }
 
     bool mTeardown = false;
