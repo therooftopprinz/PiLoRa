@@ -27,7 +27,7 @@ public:
     {
         mGpio.setMode(pResetPin, hwapi::PinMode::OUTPUT);
         mGpio.setMode(pDio1Pin,  hwapi::PinMode::INPUT);
-        mGpio.set(mResetPin, 0);
+        mGpio.set(mResetPin, 1);
         mDio1CbId = mGpio.registerCallback(mDio1Pin, hwapi::Edge::RISING, [this](uint32_t){onDio1();});
         init();
     }
@@ -42,10 +42,11 @@ public:
     void resetModule()
     {
         // 7.2.2. Manual Reset - SX1276/77/78/79 DATASHEET
+        // TODO: There's something wrong with reset
         using namespace std::chrono_literals;
-        mGpio.set(mResetPin, 1);
-        std::this_thread::sleep_for(100us);
         mGpio.set(mResetPin, 0);
+        std::this_thread::sleep_for(100us);
+        mGpio.set(mResetPin, 1);
         std::this_thread::sleep_for(5ms);
         init();
     }
@@ -194,7 +195,7 @@ public:
             return -1;
         }
 
-        setRegister(REGDIOMAPPING1, 0x40);
+        setRegister(REGDIOMAPPING1, DIO0TXDONEMASK);
 
         // 4.1.6.  LoRaTM Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
         // TODO: ANNOTATE SPECS
@@ -208,7 +209,6 @@ public:
         std::memcpy(wro+1, pData, pSize);
         mSpi.xfer(wro, wri, 1+pSize);
 
-        setRegister(REGIRQFLAGS, 0xFF);
         setMode(Mode::TX);
         {
             using namespace std::chrono_literals;
@@ -216,6 +216,7 @@ public:
             mTxDone = false;
             // TODO: Configurable TX TIMEOUT
             mRxTxDoneCv.wait(lock, [this](){return mTxDone||mTeardown;});
+
             if (!mTxDone)
             {
                 mLogger << logger::ERROR << "---------- tx timeout --------------";
@@ -296,14 +297,31 @@ private:
             // TODO: ANNOTATE SPECS
             // TODO: what value in implicit header
             uint8_t rcvSz = getRegister(REGRXNBBYTES);
-            auto currRx = getRegister(REGFIFORXCURRENTADDR);
+            uint8_t currRx = getRegister(REGFIFORXCURRENTADDR);
+            uint8_t rdBase = getRegister(REGFIFOADDRPTR);
+            if (uint8_t(currRx+rcvSz) == rdBase)
+            {
+                mLogger << logger::ERROR << "FALSE RX";
+                return;
+            }
+
+            if (currRx>rdBase)
+            {
+                mLogger << logger::WARNING << "CURRENTRX > READBASE! Mising Interrupt?!";
+                rcvSz += (currRx-rdBase);
+            }
+            else if (currRx<rdBase)
+            {
+                mLogger << logger::WARNING << "CURRENTRX < READBASE! Mising Interrupt?!";
+                rcvSz += (255-rdBase)+currRx;
+            }
+
             common::Buffer pvect(new std::byte[rcvSz], size_t(rcvSz));
             ssize_t maxsize = 256-currRx;
             uint8_t wro[257];
             uint8_t wri[257];
             wro[0] = REGFIFO;
 
-            // TODO: DETERMINE IF THIS IS CORRECT BEHAVIOR
             if (rcvSz>=maxsize)
             {
                 mLogger << logger::WARNING << "FIFO AT: " << unsigned(getRegister(REGFIFOADDRPTR));
@@ -330,18 +348,19 @@ private:
             }
 
             mRxTxDoneCv.notify_one();
+            setRegister(REGIRQFLAGS, RXDONEMASK);
             mLogger << logger::DEBUG << "RX DONE /";
         }
         else
         {
-            mLogger << logger::DEBUG << "TX DONE!!";
             {
                 std::unique_lock<std::mutex> lock(mTxDoneMutex);
                 mTxDone = true;
             }
             mRxTxDoneCv.notify_one();
+            setRegister(REGIRQFLAGS, TXDONEMASK);
+            mLogger << logger::DEBUG << "TX DONE!!";
         }
-        setRegister(REGIRQFLAGS, 0xFF);
     }
 
     bool mTeardown = false;
@@ -351,6 +370,7 @@ private:
     std::condition_variable mRxTxDoneCv{};
     std::mutex mTxDoneMutex;
     bool mTxDone{};
+    bool mLastPacketAddr;
 
     uint8_t mFrLsb;
     uint8_t mFrMid;

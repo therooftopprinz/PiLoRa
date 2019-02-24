@@ -27,7 +27,7 @@ public:
     Spi(uint8_t pChannel)
     {
         logger << logger::DEBUG << "opening spi channel="<< unsigned(pChannel) << " for gpio=" << gGpioHandle;
-        mHandle  = spi_open(gGpioHandle, pChannel, 57600,
+        mHandle  = spi_open(gGpioHandle, pChannel, 921600,
             //bbbbbbRTnnnnWAuuupppmm
             0b0000000000000000000000);
         if (mHandle<0)
@@ -93,7 +93,7 @@ public:
     int set(unsigned pGpio, unsigned pLevel)
     {
         auto rv = gpio_write(gGpioHandle, pGpio, pLevel);
-        logger << logger::DEBUG << rv << "= set(" << pGpio << ", " << pLevel << ")";
+        logger << logger::DEBUG << rv << " = set(" << pGpio << ", " << pLevel << ")";
         return rv;
     }
     int registerCallback(unsigned pUserGpio, Edge pEdge, std::function<void(uint32_t tick)> pCb)
@@ -101,7 +101,11 @@ public:
         unsigned edge = 0;
         if (Edge::RISING == pEdge)
         {
-            edge = 1;
+            edge = RISING_EDGE;
+        }
+        else
+        {
+            edge = FALLING_EDGE;
         }
 
         fnCb[pUserGpio] = pCb;
