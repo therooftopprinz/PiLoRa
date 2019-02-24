@@ -58,16 +58,17 @@ struct SX1278Tests : Test
         constexpr auto LOWFREQUENCYMODEONMASK = 0b00001000;
         constexpr auto STDBY                  = 1;
         constexpr auto REGOPMODE              = 1;
+        constexpr auto REGIRQFLAGSMASKMASK    = 0x11;
         constexpr auto REGFIFOTXBASEADD       = 0x0E;
         constexpr auto REGFIFORXBASEADD       = 0x0F;
 
         // REGOPMODE
-        static uint8_t startMode0[] = { uint8_t(0x80|REGOPMODE), 0};
-        EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startMode0, 2), _, 2)).Times(1).RetiresOnSaturation();
+        static uint8_t startMode[] = { uint8_t(0x80|REGOPMODE), uint8_t(LONGRANGEMODEMASK|LOWFREQUENCYMODEONMASK|STDBY)};
+        EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startMode, 2), _, 2)).Times(1).RetiresOnSaturation();
 
-        // REGOPMODE
-        static uint8_t startMode1[] = { uint8_t(0x80|REGOPMODE), uint8_t(LONGRANGEMODEMASK|LOWFREQUENCYMODEONMASK|STDBY)};
-        EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startMode1, 2), _, 2)).Times(1).RetiresOnSaturation();
+        // REGIRQFLAGSMASKMASK
+        static uint8_t startIrqFlag[] = { uint8_t(0x80|REGIRQFLAGSMASKMASK), uint8_t(TXDONEMASKMASK | RXDONEMASKMASK) };
+        EXPECT_CALL(mSpiMock,  xfer(isBufferEq(startIrqFlag, 2), _, 2)).Times(1).RetiresOnSaturation();
 
         // REGFIFOTXBASEADD
         static uint8_t startFifoTxBaseAddr[] = { uint8_t(0x80|REGFIFOTXBASEADD), 0 };
@@ -107,7 +108,13 @@ TEST(SX1278Utils, shouldSetUnmasked)
 
 TEST_F(SX1278Tests, shouldResetModule)
 {
-        
+    testing::InSequence dummy;
+    EXPECT_CALL(mGpioMock, set(mResetPin, 1)).Times(1).RetiresOnSaturation();
+    EXPECT_CALL(mGpioMock, set(mResetPin, 0)).Times(1).RetiresOnSaturation();
+
+    expectInit();
+
+    mSut->resetModule();
 }
 
 TEST_F(SX1278Tests, shouldStandby)
@@ -125,8 +132,8 @@ TEST_F(SX1278Tests, shouldStandby)
 TEST_F(SX1278Tests, shouldSetUsageRx)
 {
     constexpr auto REGDIOMAPPING1 = 0x40;
-    constexpr auto DIO0RXDONEMASK = 0;
-    uint8_t dio1mapping[] = { uint8_t(0x80|REGDIOMAPPING1), DIO0RXDONEMASK};
+    constexpr auto DIO1RXDONE = 0;
+    uint8_t dio1mapping[] = { uint8_t(0x80|REGDIOMAPPING1), DIO1RXDONE};
     EXPECT_CALL(mSpiMock,  xfer(isBufferEq(dio1mapping, 2), _, 2)).Times(1).RetiresOnSaturation();
     mSut->setUsage(SX1278::Usage::RXC);
 }
@@ -134,8 +141,8 @@ TEST_F(SX1278Tests, shouldSetUsageRx)
 TEST_F(SX1278Tests, shouldSetUsageTx)
 {
     constexpr auto REGDIOMAPPING1 = 0x40;
-    constexpr auto DIO0TXDONEMASK = 0x40;
-    uint8_t dio1mapping[] = { uint8_t(0x80|REGDIOMAPPING1), DIO0TXDONEMASK};
+    constexpr auto DIO1TXDONE = 1;
+    uint8_t dio1mapping[] = { uint8_t(0x80|REGDIOMAPPING1), DIO1TXDONE};
     EXPECT_CALL(mSpiMock,  xfer(isBufferEq(dio1mapping, 2), _, 2)).Times(1).RetiresOnSaturation();
     mSut->setUsage(SX1278::Usage::TX);
 }
@@ -145,10 +152,10 @@ TEST_F(SX1278Tests, shouldSetCarrier)
     constexpr auto REGFRLSB = 8;
     constexpr auto REGFRMID = 7;
     constexpr auto REGFRMSB = 6;
-    constexpr auto FOSC = 32000000ull;
+    constexpr auto FOSC = 32000000ul;
 
     constexpr auto carrier = 434000000ul;
-    constexpr auto frf = (carrier*524288ull)/FOSC;
+    constexpr auto frf = (carrier*524288ul)/FOSC;
 
     uint8_t frfLsb[] = { uint8_t(0x80|REGFRLSB), uint8_t(frf&0xFF) };
     uint8_t frfMid[] = { uint8_t(0x80|REGFRMID), uint8_t(frf>>8&0xFF) };

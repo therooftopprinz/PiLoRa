@@ -194,7 +194,7 @@ public:
             return -1;
         }
 
-        setRegister(REGDIOMAPPING1, DIO0TXDONEMASK);
+        setRegister(REGDIOMAPPING1, 0x40);
 
         // 4.1.6.  LoRaTM Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
         // TODO: ANNOTATE SPECS
@@ -279,6 +279,7 @@ private:
     {
         mUsage = Usage::UNSPEC;
         setRegister(REGOPMODE, 0); // Sleep Mode
+        setRegister(REGOPMODE, LONGRANGEMODEMASK | LOWFREQUENCYMODEONMASK); // Set LoRa
         standby();
         // 4.1.2.3.  LoRa Mode FIFO Data Buffer - SX1276/77/78/79 DATASHEET
         // 4.1.6.    LoRa Modem State Machine Sequences - SX1276/77/78/79 DATASHEET
@@ -302,7 +303,7 @@ private:
             uint8_t wri[257];
             wro[0] = REGFIFO;
 
-            // TODO: HANDLE SPURIOUS INTERRUPT
+            // TODO: DETERMINE IF THIS IS CORRECT BEHAVIOR
             if (rcvSz>=maxsize)
             {
                 mLogger << logger::WARNING << "FIFO AT: " << unsigned(getRegister(REGFIFOADDRPTR));
