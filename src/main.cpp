@@ -23,6 +23,8 @@ int main(int argc, const char* argv[])
     std::smatch match;
     std::map<std::string, std::string> options; 
 
+    // Logger::getInstance().logful();
+
     for (int i=1; i<argc; i++)
     {
         auto s = std::string(argv[i]);

@@ -21,8 +21,8 @@ template<> struct TypeTraits<uint16_t>    {_ auto type_id = 0xa3; _ size_t size 
 template<> struct TypeTraits<int16_t>     {_ auto type_id = 0xa4; _ size_t size =  sizeof(int16_t);     _ char cfmt[] = "%d";};
 template<> struct TypeTraits<uint32_t>    {_ auto type_id = 0xa5; _ size_t size =  sizeof(uint32_t);    _ char cfmt[] = "%u";};
 template<> struct TypeTraits<int32_t>     {_ auto type_id = 0xa6; _ size_t size =  sizeof(int32_t);     _ char cfmt[] = "%d";};
-template<> struct TypeTraits<uint64_t>    {_ auto type_id = 0xa7; _ size_t size =  sizeof(uint64_t);    _ char cfmt[] = "%ld";};
-template<> struct TypeTraits<int64_t>     {_ auto type_id = 0xa8; _ size_t size =  sizeof(int64_t);     _ char cfmt[] = "%lu";};
+template<> struct TypeTraits<uint64_t>    {_ auto type_id = 0xa7; _ size_t size =  sizeof(uint64_t);    _ char cfmt[] = "%lld";};
+template<> struct TypeTraits<int64_t>     {_ auto type_id = 0xa8; _ size_t size =  sizeof(int64_t);     _ char cfmt[] = "%llu";};
 template<> struct TypeTraits<float>       {_ auto type_id = 0xa9; _ size_t size =  sizeof(float);       _ char cfmt[] = "%f";};
 template<> struct TypeTraits<double>      {_ auto type_id = 0xaa; _ size_t size =  sizeof(double);      _ char cfmt[] = "%f";};
 template<> struct TypeTraits<void*>       {_ auto type_id = 0xab; _ size_t size =  sizeof(void*);       _ char cfmt[] = "%p";};
@@ -66,7 +66,7 @@ public:
         if (mLogful)
         {
             uint8_t logbuff[4096];
-            int flen = std::sprintf((char*)logbuff, "%luus %lut ", pTime, pThread);
+            int flen = std::sprintf((char*)logbuff, "%lluus %llut ", pTime, pThread);
             size_t sz = logful(logbuff + flen, id, ts...) + flen;
             logbuff[sz++] = '\n';
             ::write(1, logbuff, sz);
@@ -81,6 +81,7 @@ public:
             size_t sz = logless(usedBuffer, usedIdx, pTime, pThread, ts...) + sizeof(HeaderType);
             std::fwrite((char*)usedBuffer, 1, sz, mOutputFile);
         }
+        flush();
     }
     void logful()
     {
