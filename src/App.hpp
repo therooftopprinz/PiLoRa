@@ -75,7 +75,6 @@ private:
     flylora_sx127x::SX1278 mModule;
     std::thread mCtrlReceiver;
     std::thread mModulelReceiver;
-    logger::Logger mLogger;
 };
 
 }

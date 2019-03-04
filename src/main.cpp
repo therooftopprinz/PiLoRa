@@ -1,12 +1,24 @@
+#include <signal.h>
 #include <iostream>
 #include <memory>
 #include <regex>
+#include <Logger.hpp>
 #include <SX1278.hpp>
 #include <IHwApi.hpp>
 #include <App.hpp>
 
+void sig_handler(int signum)
+{
+    Logger::getInstance().flush();
+    exit(1);
+}
+
 int main(int argc, const char* argv[])
 {
+    signal(SIGINT, sig_handler);
+    signal(SIGKILL, sig_handler);
+    signal(SIGABRT, sig_handler);
+
     std::regex arger("^--(.+?)=(.+?)$");
     std::smatch match;
     std::map<std::string, std::string> options; 

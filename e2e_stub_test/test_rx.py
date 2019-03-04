@@ -2,8 +2,8 @@
 import socket
 
 ADDR = "127.0.0.1"
-RX = 8899
-LORA_RX = 8888
+RX = 3000
+LORA_RX = 8000
 lorarx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 

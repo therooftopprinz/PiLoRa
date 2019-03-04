@@ -26,7 +26,7 @@ class Spi : public ISpi
 public:
     Spi(uint8_t pChannel)
     {
-        logger << logger::DEBUG << "opening spi channel="<< unsigned(pChannel) << " for gpio=" << gGpioHandle;
+        Logless("DBG Spi::Spi opening spi channel=_ for gpio=_", unsigned(pChannel), gGpioHandle);
         mHandle  = spi_open(gGpioHandle, pChannel, 921600,
             //bbbbbbRTnnnnWAuuupppmm
             0b0000000000000000000000);
@@ -56,14 +56,13 @@ public:
     {
         auto rv = spi_xfer(gGpioHandle, mHandle, (char*)dataOut, (char*)dataIn, count);
         auto regname = flylora_sx127x::regIndexToString(dataOut[0]&0x7f);
-        logger << logger::DEBUG << "SPI XFER REG" << (dataOut[0]&0x80 ? "WRITE" : "READ ") << " " << regname;
-        logger << logger::DEBUG << rv << " = OUT xfer[" << count << "]: " << toHexString(dataOut, count);
-        logger << logger::DEBUG << rv << " = IN  xfer[" << count << "]: " << toHexString(dataIn, count);
+        Logless("DBG Spi::xfer SPI XFER REG _ _", (dataOut[0]&0x80 ? "WRITE" : "READ "), regname);
+        Logless("DBG Spi::xfer OUT xfer [_] _", count, BufferLog(count, dataOut));
+        Logless("DBG Spi::xfer IN  xfer [_] _", count, BufferLog(count, dataIn));
         return rv;
     }
 private:
     int mHandle;
-    logger::Logger logger = logger::Logger("hwapi::Spi");
 };
 
 class Gpio : public IGpio
@@ -77,23 +76,21 @@ public:
             pinmode = PI_OUTPUT;
         }
         auto rv = set_mode(gGpioHandle, pGpio, pinmode);
-        logger << logger::DEBUG << rv << " = setMode(" << pGpio << ", " << (PinMode::OUTPUT==pMode? "OUTPUT" : "INPUT") << ")" ;
-
-        // logger << logger::DEBUG << set_noise_filter(gGpioHandle, pGpio, 1, 1) << " = set_noise_filter()";
-        // logger << logger::DEBUG << set_glitch_filter(gGpioHandle, pGpio, 1) << " = set_glitch_filter()";
-
+        Logless("DBG Gpio::setMode _ = setmode(_,_)", rv, pGpio, (PinMode::OUTPUT==pMode? "OUTPUT" : "INPUT"));
+        Logless("DBG Gpio::setMode set_noise_filter(_)", pGpio);
+        Logless("DBG Gpio::setMode set_glitch_filter(_)", pGpio);
         return rv;
     }
     int get(unsigned pGpio)
     {
         auto rv = gpio_read(gGpioHandle, pGpio);
-        logger << logger::DEBUG << rv << "= get(" << pGpio << ")";
+        Logless("DBG Gpio::setMode _ = get(_)", rv, pGpio);
         return rv;
     }
     int set(unsigned pGpio, unsigned pLevel)
     {
         auto rv = gpio_write(gGpioHandle, pGpio, pLevel);
-        logger << logger::DEBUG << rv << " = set(" << pGpio << ", " << pLevel << ")";
+        Logless("DBG Gpio::setMode _ = set(_,_)", rv, pGpio, pLevel);
         return rv;
     }
     int registerCallback(unsigned pUserGpio, Edge pEdge, std::function<void(uint32_t tick)> pCb)
@@ -118,14 +115,11 @@ public:
 private:
     static void cb(int pi, unsigned user_gpio, unsigned level, uint32_t tick)
     {
-        Gpio::logger << logger::DEBUG << "CHANGED! PIN[" << user_gpio << "]=" << level;
+        Logless("DBG Gpio::cb CHANGED! PIN[_]=_", user_gpio, level);
         fnCb[user_gpio](tick);
     }
-    static logger::Logger logger;
     static std::array<std::function<void(uint32_t tick)>, 20> fnCb;
 };
-
-logger::Logger Gpio::logger = logger::Logger("hwapi::Gpio");
 
 std::array<std::function<void(uint32_t tick)>, 20> Gpio::fnCb = {};
 
@@ -141,14 +135,13 @@ std::shared_ptr<IGpio> getGpio()
 
 void setup()
 {
-    logger::Logger logger("hwapi::setup");
     char port[] = {'8','8','8','8',0};
     gGpioHandle = pigpio_start(nullptr, port);
     if (gGpioHandle<0)
     {
         throw std::runtime_error(std::string{} + "connecting to pigpiod failed! handle=" + std::to_string(gGpioHandle));
     }
-    logger << logger::DEBUG << "gpiohandle="<<gGpioHandle;
+    Logless("DBG hwapi::setup gpiohandle = _", gGpioHandle);
 }
 
 void teardown()

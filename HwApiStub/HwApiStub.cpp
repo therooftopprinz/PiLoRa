@@ -30,38 +30,37 @@ struct GpioStub : IGpio
 public:
     int setMode(unsigned pGpio, PinMode pMode)
     {
-        mLogger << logger::DEBUG << " setMode(" << pGpio << ", " << (PinMode::OUTPUT==pMode? "OUTPUT" : "INPUT") << ")" ;
+        Logless("DBG GpioStub::setMode setMode(_, _)", pGpio, (PinMode::OUTPUT==pMode? "OUTPUT" : "INPUT"));
         return 0;
     }
 
     int get(unsigned pGpio)
     {
-        mLogger << logger::DEBUG << " get(" << pGpio << ")";
+        Logless("DBG GpioStub::get get(_)", pGpio);
         return 0;
     }
 
     int set(unsigned pGpio, unsigned pLevel)
     {
-        mLogger << logger::DEBUG << " set(" << pGpio << ", " << pLevel << ")";
+        Logless("DBG GpioStub::set set(_, _)", pGpio, pLevel);
         return 0;
     }
 
     int registerCallback(unsigned pUserGpio, Edge pEdge, std::function<void(uint32_t tick)> pCb)
     {
         cb = pCb;
-        mLogger << logger::DEBUG << " registerCallback(" << pUserGpio << ", " << (Edge::FALLING==pEdge? "FALLING" : "RISING") << ", cb)" ;
+        Logless("DBG GpioStub::registerCallback registerCallback(_, _)", pUserGpio, (Edge::FALLING==pEdge? "FALLING" : "RISING"));
         return 0;
     }
 
     int deregisterCallback(int pCallbackId)
     {
-        mLogger << logger::DEBUG << " deregisterCallback(" << pCallbackId << ")" ;
+        Logless("DBG GpioStub::deregisterCallback deregisterCallback(_)", pCallbackId); 
         return 0;
     }
 
     std::function<void(uint32_t tick)> cb;
 private:
-    logger::Logger mLogger = logger::Logger("Gpio");
 };
 
 std::shared_ptr<ISpi> getSpi(uint8_t pChannel);
@@ -72,9 +71,8 @@ class Sx1278SpiStub : public ISpi
 public:
     Sx1278SpiStub(int pChannel)
         : mChannel(pChannel)
-        , mLogger(std::string("Sx1278SpiStub[")+std::to_string(pChannel)+"]")
     {
-        mSocket.bind(net::toIpPort(127,0,0,1, 8888));
+        mSocket.bind(net::toIpPort(127,0,0,1, 8000));
         setValue(flylora_sx127x::REGVERSION, 0x12);
     }
 
@@ -88,7 +86,7 @@ public:
     }
     int xfer(uint8_t *pDataOut, uint8_t *pDataIn, unsigned pCount)
     {
-        // mLogger << logger::DEBUG << " xfer[" << pCount << "]: " << toHexString(pDataOut, pCount);
+        Logless("DBG Sx1278SpiStub::xfer xfer[_]: _", pCount, BufferLog(pCount, pDataOut));
         bool isWrite = 0x80&pDataOut[0];
         uint8_t reg = 0x7F&pDataOut[0];
 
@@ -123,10 +121,10 @@ private:
             ssize_t maxsize = 256-fifoRxTop;
             net::IpPort src;
             auto rc = mSocket.recvfrom(data, src);
-            mLogger << logger::DEBUG << "LORA RX[" << rc << "] (UDP IN)";
+            Logless("DBG Sx1278SpiStub::loraRx LORA RX[_] (UDP IN)", rc);
             if (rc < 0)
             {
-                mLogger << logger::ERROR << "ERRNO: " << strerror(errno);
+                Logless("ERR Sx1278SpiStub::loraRx ERRNO:_", (const char*)strerror(errno));
             }
             else if (rc > 0)
             {
@@ -159,7 +157,7 @@ private:
         if (pReg!=flylora_sx127x::REGOPMODE &&
             !( mode== flylora_sx127x::Mode::STDBY || mode==flylora_sx127x::Mode::SLEEP))
         {
-            throw std::runtime_error("WRITE WHILE NOT IN SLEEP OR STANDBY MODE!!");
+            // throw std::runtime_error("WRITE WHILE NOT IN SLEEP OR STANDBY MODE!!");
         }
 
         // TODO: DATAIN VALIDATION
@@ -176,7 +174,7 @@ private:
                 {
                     throw std::runtime_error("FIFO OVERRUN!!");
                 }
-                mLogger << logger::DEBUG << "FIFO WRITE[" << fifoCount << "]: " << toHexString(pDataOut+1, fifoCount);
+                Logless("DBG Sx1278SpiStub::regwrite FIFO WRITE[_]: _", fifoCount, BufferLog(fifoCount, pDataOut+1));
                 std::memcpy(mFifo+fifoIdx, pDataOut+1, fifoCount);
                 setValue(flylora_sx127x::REGFIFOADDRPTR, fifoIdx+fifoCount);
                 break;
@@ -197,16 +195,16 @@ private:
 
                 if (flylora_sx127x::Mode::TX == mode)
                 {
-                    mLogger << logger::DEBUG << "----- TRANSMITTING -----";
+                    Logless("DBG Sx1278SpiStub::regwrite ----- TRANSMITTING -----");
                     auto fifoTxBase = getValue(flylora_sx127x::REGFIFOTXBASEADD);
                     // TODO: TX LEN FOR IMPLICIT HEADER MODE
                     auto txLen = getValue(flylora_sx127x::REGPAYLOADLENGTH);
                     common::Buffer data((std::byte*)(mFifo+fifoTxBase), txLen, false);
-                    mSocket.sendto(data, net::toIpPort(127,0,0,1,8889));
+                    mSocket.sendto(data, net::toIpPort(127,0,0,1,8001));
 
                     std::static_pointer_cast<GpioStub>(getGpio())->cb(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
                     setValue(pReg, flylora_sx127x::Mode::STDBY, flylora_sx127x::MODEMASK);
-                    mLogger << logger::DEBUG << "------- TX DONE --------";
+                    Logless("DBG Sx1278SpiStub::regwrite ----- TRANSMITTING -----");
                 }
                 else if (flylora_sx127x::Mode::RXCONTINUOUS == mode)
                 {
@@ -233,7 +231,7 @@ private:
                 }
                 std::memcpy(pDataOut+1, mFifo+fifoIdx, fifoCount);
                 std::memcpy(pDataIn+1, mFifo+fifoIdx, fifoCount);
-                mLogger << logger::DEBUG << "FIFO READ[" << fifoCount << "]@" << unsigned(fifoIdx) << ": " << toHexString(pDataOut+1, fifoCount);
+                Logless("DBG Sx1278SpiStub::regread FIFO READ[_]@_: _", fifoCount, unsigned(fifoIdx), BufferLog(fifoCount, pDataOut+1));
                 setValue(flylora_sx127x::REGFIFOADDRPTR, fifoIdx+fifoCount);
                 break;
             }
@@ -253,11 +251,7 @@ private:
 
     uint8_t getValue(uint8_t pReg)
     {
-        // std::stringstream ss;
-        // ss << "READ  " << std::setw(24) << std::left << flylora_sx127x::regIndexToString(pReg) << " = 0x" <<
-            // std::hex << std::setw(2) << std::right << std::setfill('0') << unsigned(mRegs[pReg]);
-        // TODO: IMPROVE LOGGER
-        // mLogger << logger::DEBUG << ss.str();
+        Logless("DBG Sx1278SpiStub::getValue READ _=_", flylora_sx127x::regIndexToString(pReg), unsigned(mRegs[pReg]));
         return mRegs[pReg];
     }
 
@@ -269,11 +263,7 @@ private:
 
     void setValue(uint8_t pReg, uint8_t pValue)
     {
-        std::stringstream ss;
-        ss << "WRITE " << std::setw(24) << std::left << flylora_sx127x::regIndexToString(pReg) << " = 0x" <<
-            std::hex << std::setw(2) << std::right << std::setfill('0') << unsigned(pValue);
-        // TODO: IMPROVE LOGGER
-        mLogger << logger::DEBUG << ss.str();
+        Logless("DBG Sx1278SpiStub::getValue READ _=_", flylora_sx127x::regIndexToString(pReg), unsigned(pValue));
         mRegs[pReg] = pValue;
     }
 
@@ -283,7 +273,6 @@ private:
     std::thread mLoRaRxThread;
     bool mLoRaRxActive;
     net::UdpSocket mSocket;
-    logger::Logger mLogger;
 };
 
 std::shared_ptr<ISpi> getSpi(uint8_t pChannel)

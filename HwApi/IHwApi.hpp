@@ -14,6 +14,13 @@ struct ISpi
     virtual int xfer(uint8_t *dataOut, uint8_t *dataIn, unsigned count) = 0;
 };
 
+
+struct II2C
+{
+    virtual int writBlock(unsigned reg, uint8_t* buf, unsigned count) = 0;
+    virtual int readBlock(unsigned reg, uint8_t* buf, unsigned count) = 0;
+};
+
 enum class PinMode
 {
     OUTPUT,

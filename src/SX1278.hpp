@@ -189,7 +189,7 @@ public:
 
     int tx(const uint8_t *pData, uint8_t pSize)
     {
-        mLogger << logger::DEBUG << "---------- tx start --------------";
+        Logless("DBG SX1278::tx DBG ---------- tx start --------------");
         if (Usage::TX != mUsage || pSize>=256)
         {
             return -1;
@@ -219,11 +219,12 @@ public:
 
             if (!mTxDone)
             {
-                mLogger << logger::ERROR << "---------- tx timeout --------------";
+                Logless("ERR SX1278::tx DBG ---------- tx timeout --------------");
+                Logger::getInstance().flush();
                 return -1;
             }
         }
-        mLogger << logger::DEBUG << "---------- tx done --------------";
+        Logless("DBG SX1278::tx ---------- tx done --------------");
         return pSize;
     }
 
@@ -240,7 +241,8 @@ public:
 
         if (!bufferQueue.size())
         {
-            mLogger << logger::ERROR << "rx timeout";
+            Logless("SX1278::rx ERR rx timeout");
+            Logger::getInstance().flush();
             return {};
         }
 
@@ -293,7 +295,7 @@ private:
     {
         if (Usage::RXC == mUsage)
         {
-            mLogger << logger::DEBUG << "RX DONE \\";
+            Logless("DBG SX1278::onDio1 RX DONE \\");
             // TODO: ANNOTATE SPECS
             // TODO: what value in implicit header
             uint8_t rcvSz = getRegister(REGRXNBBYTES);
@@ -301,18 +303,18 @@ private:
             uint8_t rdBase = getRegister(REGFIFOADDRPTR);
             if (uint8_t(currRx+rcvSz) == rdBase)
             {
-                mLogger << logger::ERROR << "FALSE RX";
+                Logless("ERR SX1278::onDio1 FALSE RX");
                 return;
             }
 
             if (currRx>rdBase)
             {
-                mLogger << logger::WARNING << "CURRENTRX > READBASE! Mising Interrupt?!";
+                Logless("ERR SX1278::onDio1 FALSE RX");
                 rcvSz += (currRx-rdBase);
             }
             else if (currRx<rdBase)
             {
-                mLogger << logger::WARNING << "CURRENTRX < READBASE! Mising Interrupt?!";
+                Logless("WRN SX1278::onDio1 CURRENTRX > READBASE! Mising Interrupt?!");
                 rcvSz += (255-rdBase)+currRx;
             }
 
@@ -324,12 +326,12 @@ private:
 
             if (rcvSz>=maxsize)
             {
-                mLogger << logger::WARNING << "FIFO AT: " << unsigned(getRegister(REGFIFOADDRPTR));
+                Logless("WRN SX1278::onDio1 FIFO AT: _", unsigned(rdBase));
                 mSpi.xfer(wro, wri, 1+maxsize);
                 std::memcpy(pvect.data(), wri+1, maxsize);
                 if (size_t remSize = rcvSz-maxsize)
                 {
-                    mLogger << logger::WARNING << "FIFO AT: " << unsigned(getRegister(REGFIFOADDRPTR));
+                    Logless("WRN SX1278::onDio1 FIFO AT: _", unsigned(getRegister(REGFIFOADDRPTR)));
                     mSpi.xfer(wro, wri, 1+remSize);
                     std::memcpy(pvect.data()+maxsize, wri+1, remSize);
                 }
@@ -338,7 +340,7 @@ private:
             {
                 mSpi.xfer(wro, wri, 1+rcvSz);
                 std::memcpy(pvect.data(), wri+1, rcvSz);
-                mLogger << logger::DEBUG << "FIFO AT: " << unsigned(getRegister(REGFIFOADDRPTR));
+                Logless("DBG SX1278::onDio1 FIFO AT: _", unsigned(rdBase));
             }
 
 
@@ -349,7 +351,7 @@ private:
 
             mRxTxDoneCv.notify_one();
             setRegister(REGIRQFLAGS, RXDONEMASK);
-            mLogger << logger::DEBUG << "RX DONE /";
+            Logless("DBG SX1278::onDio1 RX DONE /");
         }
         else
         {
@@ -359,7 +361,7 @@ private:
             }
             mRxTxDoneCv.notify_one();
             setRegister(REGIRQFLAGS, TXDONEMASK);
-            mLogger << logger::DEBUG << "TX DONE!!";
+            Logless("DBG SX1278::onDio1 TX DONE!");
         }
     }
 
@@ -388,8 +390,6 @@ private:
 
     hwapi::ISpi& mSpi;
     hwapi::IGpio& mGpio;
-
-    logger::Logger mLogger = logger::Logger("SX1278");
 };
 
 } // flylora_sx127x

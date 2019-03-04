@@ -66,7 +66,7 @@ public:
         int rv = ::bind(mSockFd, (sockaddr *)&myaddr, sizeof(myaddr));
         if (rv < 0)
         {
-            std::string err = std::string("Bind failed: ") + std::to_string(rv) + " Error: " + strerror(errno);
+            std::string err = std::string("Bind failed: ") + std::to_string(pAddr.port) + " Error: " + strerror(errno);
             throw std::runtime_error(err);
         }
     }
