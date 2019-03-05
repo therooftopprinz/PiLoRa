@@ -11,6 +11,9 @@ while (i<1000):
     data = "TEST MESSAGE " + str(i) + "-----------------------------------------------"
     sx1278_tx.sendto(data, (ADDR, LORA_RX))
     print "sent: ", data
-    time.sleep(0.03333)
+    time.sleep(0.02333)
     i += 1
-sx1278_tx.sendto("end", (ADDR, LORA_RX))
+i=0
+while (i<1000):
+    sx1278_tx.sendto("end", (ADDR, LORA_RX))
+    i+=1

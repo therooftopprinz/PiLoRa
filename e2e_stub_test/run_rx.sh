@@ -1,6 +1,6 @@
 #!/bin/sh
 cd ..
-mkdir build
+mkdir -p build
 cd build
 ../configure.py
 make binstub -j4
