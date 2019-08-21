@@ -22,6 +22,7 @@ class Build:
         self.cxxflags = ''
         self.linkflags = ''
     def add_include_paths(self, p):
+        print "add_include_paths: ", p
         self.cxxflags = self.cxxflags + ' ' +' '.join(['-I'+TLD+i for i in p])
     def set_cxxflags(self, f):
         self.cxxflags = f
@@ -71,6 +72,9 @@ class Build:
 
 def clean_filenames(a):
     return [i.strip().replace('./','') for i in a]
+def combine_list(list, list2):
+    list.extend(list2)
+    return list
 
 print 'configuring for testing'
 
@@ -107,60 +111,55 @@ gtest.add_src_files(['gmock-gtest-all.cc'])
 gtest.add_include_paths(['gtest'])
 gtest.target_archive('gtest.a')
 
+COMMON_TARGET_INLCUDES = ['src/', 'HwApi/', 'Logless/src/', 'BFC/src']
+
 src = Build()
 src.set_cxxflags(CXXFLAGS)
-src.add_include_paths(['src/', 'HwApi/', 'common/', 'Logless/src/'])
+src.add_include_paths(COMMON_TARGET_INLCUDES)
 src.set_src_dir('src/')
 src.add_src_files(SRC_SOURCES)
 src.target_archive('src.a')
 
-common = Build()
-common.set_cxxflags(CXXFLAGS)
-common.add_include_paths(['common/'])
-common.set_src_dir('common/')
-common.add_src_files(COMMON_SOURCES)
-common.target_archive('common.a')
-
 pigpiohwApi = Build()
 pigpiohwApi.set_cxxflags(CXXFLAGS)
-pigpiohwApi.add_include_paths(['HwApi/', 'common/', 'src/', 'Logless/src/'])
+pigpiohwApi.add_include_paths(COMMON_TARGET_INLCUDES)
 pigpiohwApi.set_src_dir('PigpioHwApi/')
 pigpiohwApi.add_src_files(PIGPIO_SOURCES)
 pigpiohwApi.target_archive('pigpiohwapi.a')
 
 hwapistub = Build()
 hwapistub.set_cxxflags(CXXFLAGS)
-hwapistub.add_include_paths(['HwApi/', 'common/', 'src/', 'Logless/src/'])
+hwapistub.add_include_paths(COMMON_TARGET_INLCUDES)
 hwapistub.set_src_dir('HwApiStub/')
 hwapistub.add_src_files(STUB_SOURCES)
 hwapistub.target_archive('stub.a')
 
 test = Build()
 test.set_cxxflags(CXXFLAGS)
-test.add_include_paths(['gtest/', 'src/', 'HwApi/', 'test/', 'common/', 'Logless/src/'])
+test.add_include_paths(combine_list(COMMON_TARGET_INLCUDES,['gtest/', 'test/']))
 test.set_src_dir('test/')
 test.add_src_files(TEST_SOURCES)
-test.add_dependencies(['gtest.a', 'src.a', 'common.a'])
+test.add_dependencies(['gtest.a', 'src.a'])
 test.add_external_dependencies(['Logless/build/logless.a'])
 test.set_linkflags("-lpthread")
 test.target_executable('test')
 
 binstub = Build()
 binstub.set_cxxflags(CXXFLAGS)
-binstub.add_include_paths(['src/', 'HwApi/', 'common/', 'Logless/src/'])
+binstub.add_include_paths(COMMON_TARGET_INLCUDES)
 binstub.set_src_dir('src/')
 binstub.add_src_files(["main.cpp"])
-binstub.add_dependencies(['src.a', 'stub.a', 'common.a'])
+binstub.add_dependencies(['src.a', 'stub.a'])
 binstub.add_external_dependencies(['Logless/build/logless.a'])
 binstub.set_linkflags("-lpthread")
 binstub.target_executable('binstub')
 
 binpigpio = Build()
 binpigpio.set_cxxflags(CXXFLAGS)
-binpigpio.add_include_paths(['src/', 'HwApi/', 'HwApi/', 'common/', 'Logless/src/'])
+binpigpio.add_include_paths(COMMON_TARGET_INLCUDES)
 binpigpio.set_src_dir('src/')
 binpigpio.add_src_files(["main.cpp"])
-binpigpio.add_dependencies(['src.a', 'pigpiohwapi.a', 'common.a'])
+binpigpio.add_dependencies(['src.a', 'pigpiohwapi.a'])
 binpigpio.add_external_dependencies(['Logless/build/logless.a'])
 binpigpio.set_linkflags("-lpthread -lpigpiod_if2")
 binpigpio.target_executable('binpigpio')
@@ -169,7 +168,6 @@ with open('Makefile','w+') as mf:
     mf.write(gtest.generate_make())
     mf.write(test.generate_make())
     mf.write(src.generate_make())
-    mf.write(common.generate_make())
     mf.write(pigpiohwApi.generate_make())
     mf.write(hwapistub.generate_make())
     mf.write(binstub.generate_make())

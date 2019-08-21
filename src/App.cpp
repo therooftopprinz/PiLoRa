@@ -12,12 +12,12 @@ int Args::getChannel() const
     return parseInt("channel");
 }
 
-net::IpPort Args::getCtrlAddr() const
+bfc::IpPort Args::getCtrlAddr() const
 {
     return parseIpPort("cx", {0, 2221u});
 }
 
-net::IpPort Args::getIoAddr() const
+bfc::IpPort Args::getIoAddr() const
 {
     if (isTx())
     {
@@ -115,12 +115,12 @@ int Args::parseInt(std::string pKey, int pDefaultValue) const
     return std::stoi(it->second);
 }
 
-net::IpPort Args::parseIpPort(std::string pKey, net::IpPort pDefault) const
+bfc::IpPort Args::parseIpPort(std::string pKey, bfc::IpPort pDefault) const
 {
     std::regex addressFilter("([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+):([0-9]+)");
     std::smatch match;
     auto it = mOptions.find(pKey);
-    net::IpPort rv;
+    bfc::IpPort rv;
     if (it == mOptions.cend())
     {
         rv = pDefault;
@@ -138,7 +138,7 @@ net::IpPort Args::parseIpPort(std::string pKey, net::IpPort pDefault) const
             uint8_t c = std::stoi(match[3].str());
             uint8_t d = std::stoi(match[4].str());
             uint16_t port = std::stoi(match[5].str());
-            rv = net::toIpPort(a,b,c,d,port);
+            rv = bfc::toIpPort(a,b,c,d,port);
         }
         else
         {
@@ -223,7 +223,7 @@ flylora_sx127x::LnaGain Args::parseGain(std::string pKey) const
     throw std::runtime_error(it->second + " is invalid lna gain value");
 }
 
-App::App(net::IUdpFactory& pUdpFactory, const Args& pArgs)
+App::App(bfc::IUdpFactory& pUdpFactory, const Args& pArgs)
     : mChannel(pArgs.getChannel())
     , mCtrlAddr(pArgs.getCtrlAddr())
     , mMode(pArgs.isTx()? Mode::TX : Mode::RX)
@@ -332,7 +332,7 @@ void App::runRx()
 {
     while (1)
     {
-        common::Buffer received = mModule.rx();
+        bfc::Buffer received = mModule.rx();
         if (received.size())
         {
             mIoSock->sendto(received, mIoAddr);
@@ -342,12 +342,13 @@ void App::runRx()
 
 void App::runTx()
 {
-    common::Buffer recvbuffer(new std::byte[1024], 1024);
+    bfc::Buffer recvbuffer(new std::byte[1024], 1024);
+    bfc::BufferView recvbufferview(recvbuffer);
     while (1)
     {
-        net::IpPort src;
-        auto sz = mIoSock->recvfrom(recvbuffer, src);
-        mModule.tx((uint8_t*)recvbuffer.data(), sz);
+        bfc::IpPort src;
+        auto sz = mIoSock->recvfrom(recvbufferview, src);
+        mModule.tx((uint8_t*)recvbufferview.data(), sz);
     }
 }
 

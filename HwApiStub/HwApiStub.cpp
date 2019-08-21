@@ -72,7 +72,7 @@ public:
     Sx1278SpiStub(int pChannel)
         : mChannel(pChannel)
     {
-        mSocket.bind(net::toIpPort(127,0,0,1, 8000));
+        mSocket.bind(bfc::toIpPort(127,0,0,1, 8000));
         setValue(flylora_sx127x::REGVERSION, 0x12);
     }
 
@@ -114,12 +114,12 @@ private:
         mSocket.setsockopt(SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(timeval));
         mLoRaRxActive = true;
         std::byte buffer[256];
-        common::Buffer data(buffer, 256, false);
+        bfc::BufferView data(buffer, sizeof(buffer));
         while (mLoRaRxActive)
         {
             auto fifoRxTop = getValue(flylora_sx127x::REGFIFORXBYTEADDR);
             ssize_t maxsize = 256-fifoRxTop;
-            net::IpPort src;
+            bfc::IpPort src;
             auto rc = mSocket.recvfrom(data, src);
             Logless("DBG Sx1278SpiStub::loraRx LORA RX[_] (UDP IN)", rc);
             if (rc < 0)
@@ -199,8 +199,8 @@ private:
                     auto fifoTxBase = getValue(flylora_sx127x::REGFIFOTXBASEADD);
                     // TODO: TX LEN FOR IMPLICIT HEADER MODE
                     auto txLen = getValue(flylora_sx127x::REGPAYLOADLENGTH);
-                    common::Buffer data((std::byte*)(mFifo+fifoTxBase), txLen, false);
-                    mSocket.sendto(data, net::toIpPort(127,0,0,1,8001));
+                    bfc::BufferView data((std::byte*)(mFifo+fifoTxBase), txLen);
+                    mSocket.sendto(data, bfc::toIpPort(127,0,0,1,8001));
 
                     std::static_pointer_cast<GpioStub>(getGpio())->cb(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
                     setValue(pReg, flylora_sx127x::Mode::STDBY, flylora_sx127x::MODEMASK);
@@ -272,7 +272,7 @@ private:
     int mChannel;
     std::thread mLoRaRxThread;
     bool mLoRaRxActive;
-    net::UdpSocket mSocket;
+    bfc::UdpSocket mSocket;
 };
 
 std::shared_ptr<ISpi> getSpi(uint8_t pChannel)

@@ -18,8 +18,8 @@ class Args
 public:
     Args(const Options& pOptions);
     int getChannel() const;
-    net::IpPort getCtrlAddr() const;
-    net::IpPort getIoAddr() const;
+    bfc::IpPort getCtrlAddr() const;
+    bfc::IpPort getIoAddr() const;
     bool isTx() const;
     uint32_t getCarrier() const;
     flylora_sx127x::Bw getBw() const;
@@ -35,7 +35,7 @@ private:
     uint32_t parseUnsigned(std::string pKey) const;
     int parseInt(std::string pKey) const;
     int parseInt(std::string pKey, int pDefaultValue) const;
-    net::IpPort parseIpPort(std::string pKey, net::IpPort pDefault) const;
+    bfc::IpPort parseIpPort(std::string pKey, bfc::IpPort pDefault) const;
     flylora_sx127x::Bw parseBw(std::string pKey) const;
     flylora_sx127x::CodingRate parseCr(std::string pKey) const;
     flylora_sx127x::SpreadingFactor parseSf(std::string pKey) const;
@@ -47,7 +47,7 @@ private:
 class App
 {
 public:
-    App(net::IUdpFactory& pUdpFactory, const Args& pArgs);
+    App(bfc::IUdpFactory& pUdpFactory, const Args& pArgs);
     int run();
 
 private:
@@ -56,9 +56,9 @@ private:
 
     enum class Mode{TX, RX};
     uint32_t mChannel;
-    net::IpPort mCtrlAddr;
+    bfc::IpPort mCtrlAddr;
     Mode mMode;
-    net::IpPort mIoAddr;
+    bfc::IpPort mIoAddr;
     uint32_t mCarrier;
     flylora_sx127x::Bw mBw;
     flylora_sx127x::CodingRate mCr;
@@ -68,8 +68,8 @@ private:
     flylora_sx127x::LnaGain mRxGain;
     int mResetPin;
     int mDio1Pin;
-    std::unique_ptr<net::ISocket> mCtrlSock;
-    std::unique_ptr<net::ISocket> mIoSock;
+    std::unique_ptr<bfc::ISocket> mCtrlSock;
+    std::unique_ptr<bfc::ISocket> mIoSock;
     std::shared_ptr<hwapi::ISpi>  mSpi;
     std::shared_ptr<hwapi::IGpio> mGpio;
     flylora_sx127x::SX1278 mModule;

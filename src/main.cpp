@@ -38,7 +38,7 @@ int main(int argc, const char* argv[])
         }
     }
 
-    std::unique_ptr<net::IUdpFactory> udpFactory = std::make_unique<net::UdpFactory>();
+    std::unique_ptr<bfc::IUdpFactory> udpFactory = std::make_unique<bfc::UdpFactory>();
     app::Args args(options);
     hwapi::setup();
     app::App app(*udpFactory, args);

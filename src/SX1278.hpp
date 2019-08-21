@@ -228,7 +228,7 @@ public:
         return pSize;
     }
 
-    common::Buffer rx()
+    bfc::Buffer rx()
     {
         std::unique_lock<std::mutex> lock(bufferQueueMutex);
 
@@ -246,7 +246,7 @@ public:
             return {};
         }
 
-        common::Buffer rv = std::move(bufferQueue.front());
+        bfc::Buffer rv = std::move(bufferQueue.front());
         bufferQueue.pop_front();
         return rv;
     }
@@ -318,7 +318,7 @@ private:
                 rcvSz += (255-rdBase)+currRx;
             }
 
-            common::Buffer pvect(new std::byte[rcvSz], size_t(rcvSz));
+            bfc::Buffer pvect(new std::byte[rcvSz], size_t(rcvSz));
             ssize_t maxsize = 256-currRx;
             uint8_t wro[257];
             uint8_t wri[257];
@@ -367,7 +367,7 @@ private:
 
     bool mTeardown = false;
     std::mutex bufferQueueMutex;
-    std::deque<common::Buffer> bufferQueue;
+    std::deque<bfc::Buffer> bufferQueue;
 
     std::condition_variable mRxTxDoneCv{};
     std::mutex mTxDoneMutex;
