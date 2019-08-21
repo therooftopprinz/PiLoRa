@@ -4,3 +4,6 @@
 [submodule "BFC"]
 	path = BFC
 	url = https://github.com/therooftopprinz/BFC.git
+[submodule "cum"]
+	path = cum
+	url = https://github.com/therooftopprinz/cum.git
