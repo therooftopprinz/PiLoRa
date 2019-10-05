@@ -111,7 +111,7 @@ gtest.add_src_files(['gmock-gtest-all.cc'])
 gtest.add_include_paths(['gtest'])
 gtest.target_archive('gtest.a')
 
-COMMON_TARGET_INLCUDES = ['src/', 'HwApi/', 'Logless/src/', 'BFC/src']
+COMMON_TARGET_INLCUDES = ['src/', 'HwApi/', 'Logless/src/', 'BFC/include']
 
 src = Build()
 src.set_cxxflags(CXXFLAGS)
