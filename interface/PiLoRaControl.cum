@@ -1,0 +1,50 @@
+Type U8               {type(unsigned)     width(8)};
+Type U16              {type(unsigned)     width(16)};
+Type U32              {type(unsigned)     width(32)};
+Type U64              {type(unsigned)     width(64)};
+Type I8               {type(signed)       width(8)};
+Type I16              {type(signed)       width(16)};
+Type I32              {type(signed)       width(32)};
+Type I64              {type(signed)       width(64)};
+Type F32              {type(float)};
+Type F64              {type(double)};
+
+Sequence DeviceMeasurementRequest
+{
+	U8 spare
+};
+
+Sequence DeviceMeasurementReport
+{
+	U8 spare
+};
+
+Sequence DeviceStatusRequest
+{
+	U8 spare
+};
+
+Sequence DeviceStatusReport
+{
+	U8 spare
+};
+
+Sequence DeviceReconfigureRequest
+{
+	U8 spare
+};
+
+Choice Messages
+{
+    DeviceMeasurementRequest,
+    DeviceMeasurementReport,
+    DeviceStatusRequest,
+    DeviceStatusReport,
+    DeviceReconfigureRequest
+};
+
+Sequence PiLoRaControl
+{
+	U8 transactionId,
+	Messages
+};
