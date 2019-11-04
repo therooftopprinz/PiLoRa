@@ -8,7 +8,7 @@
 #include <atomic>
 #include <cstring>
 #include <deque>
-#include <BFC/Buffer.hpp>
+#include <bfc/Buffer.hpp>
 #include <Logger.hpp>
 
 namespace flylora_sx127x

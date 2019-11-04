@@ -8,7 +8,7 @@
 #include <IHwApi.hpp>
 #include <Logger.hpp>
 #include <SX127x.hpp>
-#include <BFC/Udp.hpp>
+#include <bfc/Udp.hpp>
 
 namespace hwapi
 {
