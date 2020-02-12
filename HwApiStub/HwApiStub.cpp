@@ -5,7 +5,7 @@
 #include <memory>
 #include <thread>
 #include <chrono>
-#include <IHwApi.hpp>
+#include <PiGpioHwApi/HwApi.hpp>
 #include <Logger.hpp>
 #include <SX127x.hpp>
 #include <bfc/Udp.hpp>

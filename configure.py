@@ -89,7 +89,7 @@ p = subprocess.Popen('cd '+TLD+'test        && find .             | egrep \'\.cp
 q = subprocess.Popen('cd '+TLD+'src         && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
 r = subprocess.Popen('cd '+TLD+'HwApiStub   && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
 s = subprocess.Popen('cd '+TLD+'common      && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
-u = subprocess.Popen('cd '+TLD+'PigpioHwApi && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
+u = subprocess.Popen('cd '+TLD+'PiGpioHwApi && find .             | egrep \'\.cpp$\' | grep -v main.cpp', shell=True, stdout=subprocess.PIPE)
 
 TEST_SOURCES = clean_filenames(p.stdout.readlines())
 SRC_SOURCES  = clean_filenames(q.stdout.readlines())
@@ -111,7 +111,7 @@ gtest.add_src_files(['gmock-gtest-all.cc'])
 gtest.add_include_paths(['gtest'])
 gtest.target_archive('gtest.a')
 
-COMMON_TARGET_INLCUDES = ['src/', 'HwApi/', 'Logless/src/', 'BFC/include']
+COMMON_TARGET_INLCUDES = ['src/', 'Logless/include', 'BFC/include', 'PiGpioHwApi/include']
 
 src = Build()
 src.set_cxxflags(CXXFLAGS)
@@ -120,12 +120,12 @@ src.set_src_dir('src/')
 src.add_src_files(SRC_SOURCES)
 src.target_archive('src.a')
 
-pigpiohwApi = Build()
-pigpiohwApi.set_cxxflags(CXXFLAGS)
-pigpiohwApi.add_include_paths(COMMON_TARGET_INLCUDES)
-pigpiohwApi.set_src_dir('PigpioHwApi/')
-pigpiohwApi.add_src_files(PIGPIO_SOURCES)
-pigpiohwApi.target_archive('pigpiohwapi.a')
+pigpiohwapi = Build()
+pigpiohwapi.set_cxxflags(CXXFLAGS)
+pigpiohwapi.add_include_paths(COMMON_TARGET_INLCUDES)
+pigpiohwapi.set_src_dir('PiGpioHwApi/src')
+pigpiohwapi.add_src_files(PIGPIO_SOURCES)
+pigpiohwapi.target_archive('pigpiohwapi.a')
 
 hwapistub = Build()
 hwapistub.set_cxxflags(CXXFLAGS)
