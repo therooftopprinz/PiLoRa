@@ -3,13 +3,13 @@
 
 #include <thread>
 #include <SX127x.hpp>
-#include <IHwApi.hpp>
+#include <PiGpioHwApi/HwApi.hpp>
 #include <condition_variable>
 #include <atomic>
 #include <cstring>
 #include <deque>
 #include <bfc/Buffer.hpp>
-#include <Logger.hpp>
+#include <logless/Logger.hpp>
 
 namespace flylora_sx127x
 {
@@ -209,21 +209,23 @@ public:
         std::memcpy(wro+1, pData, pSize);
         mSpi.xfer(wro, wri, 1+pSize);
 
+        // using namespace std::chrono_literals;
+        std::unique_lock<std::mutex> lock(mTxDoneMutex);
+        mTxDone = false;
         setMode(Mode::TX);
-        {
-            using namespace std::chrono_literals;
-            std::unique_lock<std::mutex> lock(mTxDoneMutex);
-            mTxDone = false;
-            // TODO: Configurable TX TIMEOUT
-            mRxTxDoneCv.wait(lock, [this](){return mTxDone||mTeardown;});
+        // TODO: Configurable TX TIMEOUT
+        mRxTxDoneCv.wait(lock, [this](){
+            Logless("DBG SX1278::tx mRxTxDoneCv.wait pred done:_ teardown:_",(unsigned)mTxDone,(unsigned)mTeardown);
+            return mTxDone||mTeardown;
+        });
 
-            if (!mTxDone)
-            {
-                Logless("ERR SX1278::tx DBG ---------- tx timeout --------------");
-                Logger::getInstance().flush();
-                return -1;
-            }
+        if (!mTxDone)
+        {
+            Logless("ERR SX1278::tx DBG ---------- tx timeout --------------");
+            Logger::getInstance().flush();
+            return -1;
         }
+
         Logless("DBG SX1278::tx ---------- tx done --------------");
         return pSize;
     }
@@ -343,7 +345,6 @@ private:
                 Logless("DBG SX1278::onDio1 FIFO AT: _", unsigned(rdBase));
             }
 
-
             {
                 std::unique_lock<std::mutex> lock(bufferQueueMutex);
                 bufferQueue.push_back(std::move(pvect));
@@ -358,10 +359,10 @@ private:
             {
                 std::unique_lock<std::mutex> lock(mTxDoneMutex);
                 mTxDone = true;
+                setRegister(REGIRQFLAGS, TXDONEMASK);
             }
-            mRxTxDoneCv.notify_one();
-            setRegister(REGIRQFLAGS, TXDONEMASK);
             Logless("DBG SX1278::onDio1 TX DONE!");
+            mRxTxDoneCv.notify_one();
         }
     }
 

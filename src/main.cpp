@@ -2,9 +2,9 @@
 #include <iostream>
 #include <memory>
 #include <regex>
-#include <Logger.hpp>
+#include <logless/Logger.hpp>
 #include <SX1278.hpp>
-#include <IHwApi.hpp>
+#include <PiGpioHwApi/HwApi.hpp>
 #include <App.hpp>
 
 void sig_handler(int signum)

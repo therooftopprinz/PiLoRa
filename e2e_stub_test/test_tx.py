@@ -2,7 +2,7 @@
 import socket
 
 ADDR = "127.0.0.1"
-TX_PORT = 3000
+TX_PORT = 3001
 LORA_TX_PORT = 8001
 
 txsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

@@ -6,9 +6,10 @@
 #include <thread>
 #include <chrono>
 #include <PiGpioHwApi/HwApi.hpp>
-#include <Logger.hpp>
+#include <logless/Logger.hpp>
 #include <SX127x.hpp>
 #include <bfc/Udp.hpp>
+#include <bfc/ThreadPool.hpp>
 
 namespace hwapi
 {
@@ -202,9 +203,19 @@ private:
                     bfc::BufferView data((std::byte*)(mFifo+fifoTxBase), txLen);
                     mSocket.sendto(data, bfc::toIpPort(127,0,0,1,8001));
 
-                    std::static_pointer_cast<GpioStub>(getGpio())->cb(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
+
+                    static bfc::LightFunctionObject<void()> txDoneExecutor = []()
+                        {
+                            std::static_pointer_cast<GpioStub>(getGpio())->cb(
+                                std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()
+                                    .time_since_epoch())
+                                    .count());
+                        };
+
+                    mThreadPool.execute(txDoneExecutor);
+
                     setValue(pReg, flylora_sx127x::Mode::STDBY, flylora_sx127x::MODEMASK);
-                    Logless("DBG Sx1278SpiStub::regwrite ----- TRANSMITTING -----");
+                    Logless("DBG Sx1278SpiStub::regwrite ----- TRANSMISSION COMPLETED -----");
                 }
                 else if (flylora_sx127x::Mode::RXCONTINUOUS == mode)
                 {
@@ -273,6 +284,8 @@ private:
     std::thread mLoRaRxThread;
     bool mLoRaRxActive;
     bfc::UdpSocket mSocket;
+
+    bfc::ThreadPool<bfc::LightFunctionObject<void()>> mThreadPool;
 };
 
 std::shared_ptr<ISpi> getSpi(uint8_t pChannel)

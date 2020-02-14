@@ -168,7 +168,7 @@ with open('Makefile','w+') as mf:
     mf.write(gtest.generate_make())
     mf.write(test.generate_make())
     mf.write(src.generate_make())
-    mf.write(pigpiohwApi.generate_make())
+    mf.write(pigpiohwapi.generate_make())
     mf.write(hwapistub.generate_make())
     mf.write(binstub.generate_make())
     mf.write(binpigpio.generate_make())

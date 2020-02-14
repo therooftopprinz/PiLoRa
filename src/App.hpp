@@ -2,8 +2,8 @@
 #define __APP_HPP__
 
 #include <regex>
-#include <PigpioHwApi/IHwApi.hpp>
-#include <logger/Logger.hpp>
+#include <PiGpioHwApi/HwApi.hpp>
+#include <logless/Logger.hpp>
 #include <bfc/Udp.hpp>
 #include <SX127x.hpp>
 #include <SX1278.hpp>

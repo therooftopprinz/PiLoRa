@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <IHwApi.hpp>
+#include <PiGpioHwApi/HwApi.hpp>
 
 struct SpiMock : hwapi::ISpi
 {
