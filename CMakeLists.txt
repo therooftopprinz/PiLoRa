@@ -36,3 +36,7 @@ target_include_directories(pigpiohwapistubbed PRIVATE src)
 add_executable(pilorastubbed ${pilora_src})
 target_include_directories(pilorastubbed PRIVATE src)
 target_link_libraries(pilorastubbed PRIVATE hwapi pigpiohwapistubbed logless bfc pthread)
+
+add_executable(pilora ${pilora_src})
+target_include_directories(pilora  PRIVATE src)
+target_link_libraries(pilora  PRIVATE hwapi pigpiohwapi logless bfc pthread)

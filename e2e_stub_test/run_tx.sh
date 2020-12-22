@@ -11,4 +11,4 @@ touch log.bin
 pkill -9 binstub
 pkill -9 spawner
 ../binstub --channel=1 --cx=127.0.0.1:2001 --tx=127.0.0.1:3001 --carrier=433000000 --bandwidth=500 --coding-rate=4/5 --spreading-factor=SF7 --reset-pin=33 --txrx-done-pin=32 &
-../../Logless/build/spawner ../binstub.rodata log.bin noexiteof &
+../spawner ../binstub.rodata log.bin noexiteof &
