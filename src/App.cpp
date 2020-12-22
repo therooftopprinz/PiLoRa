@@ -242,31 +242,32 @@ App::App(bfc::IUdpFactory& pUdpFactory, const Args& pArgs)
     , mSpi(hwapi::getSpi(mChannel))
     , mGpio(hwapi::getGpio())
     , mModule(*mSpi, *mGpio, mResetPin, mDio1Pin)
+    , mLogger(Logger::getInstance())
 {
-    Logless("INF App::App -------------- Parameters ---------------");
-    Logless("INF App::App channel:         _", mChannel);
-    Logless("INF App::App Mode:            _", ((const char*[]){"TX", "RX"})[int(mMode)]);
-    Logless("INF App::App Control Address: _._._._:_",
+    Logless(mLogger, "INF App::App -------------- Parameters ---------------");
+    Logless(mLogger, "INF App::App channel:         _", mChannel);
+    Logless(mLogger, "INF App::App Mode:            _", ((const char*[]){"TX", "RX"})[int(mMode)]);
+    Logless(mLogger, "INF App::App Control Address: _._._._:_",
         ((mCtrlAddr.addr>>24)&0xFF),
         ((mCtrlAddr.addr>>16)&0xFF),
         ((mCtrlAddr.addr>>8)&0xFF),
         (mCtrlAddr.addr&0xFF),
         (mCtrlAddr.port));
-    Logless("INF App::App TX/RX Address:   _._._._:_",
+    Logless(mLogger, "INF App::App TX/RX Address:   _._._._:_",
         ((mIoAddr.addr>>24)&0xFF),
         ((mIoAddr.addr>>16)&0xFF),
         ((mIoAddr.addr>>8)&0xFF),
         (mIoAddr.addr&0xFF),
         mIoAddr.port);
-    Logless("INF App::App Carrier:         _ Hz", mCarrier);
-    Logless("INF App::App Bandwidth:       _ kHz", ((const char*[]){"7.8", "10.4", "15.6", "20.8", "31.25", "41.7", "62.5", "125", "250", "500",})[int(mBw)]);
-    Logless("INF App::App Coding Rate:     _", ((const char*[]){0, "4/5", "4/6", "4/7", "4/8"})[int(mCr)]);
-    Logless("INF App::App Spread Factor:   _", ((const char*[]){0,0,0,0,0,0,"SF6", "SF7", "SF8", "SF9", "SF10", "SF11", "SF12"})[int(mSf)]);
-    Logless("INF App::App MTU:             _", mMtu);
-    Logless("INF App::App Tx Power:        _", mTxPower);
-    Logless("INF App::App Rx Gain:         _", ((const char*[]){"", "G1", "G2", "G3", "G4", "G5", "G6"})[int(mRxGain)]);
-    Logless("INF App::App Reset Pin:       _", mResetPin);
-    Logless("INF App::App TX/RX Done Pin:  _", mDio1Pin);
+    Logless(mLogger, "INF App::App Carrier:         _ Hz", mCarrier);
+    Logless(mLogger, "INF App::App Bandwidth:       _ kHz", ((const char*[]){"7.8", "10.4", "15.6", "20.8", "31.25", "41.7", "62.5", "125", "250", "500",})[int(mBw)]);
+    Logless(mLogger, "INF App::App Coding Rate:     _", ((const char*[]){0, "4/5", "4/6", "4/7", "4/8"})[int(mCr)]);
+    Logless(mLogger, "INF App::App Spread Factor:   _", ((const char*[]){0,0,0,0,0,0,"SF6", "SF7", "SF8", "SF9", "SF10", "SF11", "SF12"})[int(mSf)]);
+    Logless(mLogger, "INF App::App MTU:             _", mMtu);
+    Logless(mLogger, "INF App::App Tx Power:        _", mTxPower);
+    Logless(mLogger, "INF App::App Rx Gain:         _", ((const char*[]){"", "G1", "G2", "G3", "G4", "G5", "G6"})[int(mRxGain)]);
+    Logless(mLogger, "INF App::App Reset Pin:       _", mResetPin);
+    Logless(mLogger, "INF App::App TX/RX Done Pin:  _", mDio1Pin);
 
     Logger::getInstance().flush();
 
@@ -283,13 +284,13 @@ App::App(bfc::IUdpFactory& pUdpFactory, const Args& pArgs)
 
 int App::run()
 {
-    Logless("DBG App::run Initializing LoRa module.");
+    Logless(mLogger, "DBG App::run Initializing LoRa module.");
     mModule.resetModule();
 
     bool validated = false;
     for (int i=0; i<3; i++)
     {
-        Logless("DBG App::run Configuring LoRa module...");
+        Logless(mLogger, "DBG App::run Configuring LoRa module...");
         mModule.setUsage(Mode::TX==mMode ? flylora_sx127x::SX1278::Usage::TX :
             flylora_sx127x::SX1278::Usage::RXC);
         mModule.setCarrier(mCarrier);
@@ -302,10 +303,10 @@ int App::run()
         if (mModule.validate())
         {
             validated = true;
-            Logless("INF App::run LoRa module configured!");
+            Logless(mLogger, "INF App::run LoRa module configured!");
             break;
         }
-        Logless("ERR App::run Validation failed!");
+        Logless(mLogger, "ERR App::run Validation failed!");
     }
 
     if (!validated)

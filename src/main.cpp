@@ -4,7 +4,7 @@
 #include <regex>
 #include <logless/Logger.hpp>
 #include <SX1278.hpp>
-#include <PiGpioHwApi/HwApi.hpp>
+#include <hwapi/HwApi.hpp>
 #include <App.hpp>
 
 void sig_handler(int signum)

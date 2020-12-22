@@ -2,7 +2,7 @@
 #define __APP_HPP__
 
 #include <regex>
-#include <PiGpioHwApi/HwApi.hpp>
+#include <hwapi/HwApi.hpp>
 #include <logless/Logger.hpp>
 #include <bfc/Udp.hpp>
 #include <SX127x.hpp>
@@ -75,6 +75,7 @@ private:
     flylora_sx127x::SX1278 mModule;
     std::thread mCtrlReceiver;
     std::thread mModulelReceiver;
+    Logger& mLogger;
 };
 
 }

@@ -3,7 +3,7 @@
 
 #include <thread>
 #include <SX127x.hpp>
-#include <PiGpioHwApi/HwApi.hpp>
+#include <hwapi/HwApi.hpp>
 #include <condition_variable>
 #include <atomic>
 #include <cstring>
@@ -24,6 +24,7 @@ public:
         , mDio1Pin(pDio1Pin)
         , mSpi(pSpi)
         , mGpio(pGpio)
+        , mLogger(Logger::getInstance())
     {
         mGpio.setMode(pResetPin, hwapi::PinMode::OUTPUT);
         mGpio.setMode(pDio1Pin,  hwapi::PinMode::INPUT);
@@ -189,7 +190,7 @@ public:
 
     int tx(const uint8_t *pData, uint8_t pSize)
     {
-        Logless("DBG SX1278::tx DBG ---------- tx start --------------");
+        Logless(mLogger, "DBG SX1278::tx DBG ---------- tx start --------------");
         if (Usage::TX != mUsage || pSize>=256)
         {
             return -1;
@@ -215,18 +216,18 @@ public:
         setMode(Mode::TX);
         // TODO: Configurable TX TIMEOUT
         mRxTxDoneCv.wait(lock, [this](){
-            Logless("DBG SX1278::tx mRxTxDoneCv.wait pred done:_ teardown:_",(unsigned)mTxDone,(unsigned)mTeardown);
+            Logless(mLogger, "DBG SX1278::tx mRxTxDoneCv.wait pred done:_ teardown:_",(unsigned)mTxDone,(unsigned)mTeardown);
             return mTxDone||mTeardown;
         });
 
         if (!mTxDone)
         {
-            Logless("ERR SX1278::tx DBG ---------- tx timeout --------------");
+            Logless(mLogger, "ERR SX1278::tx DBG ---------- tx timeout --------------");
             Logger::getInstance().flush();
             return -1;
         }
 
-        Logless("DBG SX1278::tx ---------- tx done --------------");
+        Logless(mLogger, "DBG SX1278::tx ---------- tx done --------------");
         return pSize;
     }
 
@@ -243,7 +244,7 @@ public:
 
         if (!bufferQueue.size())
         {
-            Logless("SX1278::rx ERR rx timeout");
+            Logless(mLogger, "SX1278::rx ERR rx timeout");
             Logger::getInstance().flush();
             return {};
         }
@@ -297,7 +298,7 @@ private:
     {
         if (Usage::RXC == mUsage)
         {
-            Logless("DBG SX1278::onDio1 RX DONE \\");
+            Logless(mLogger, "DBG SX1278::onDio1 RX DONE \\");
             // TODO: ANNOTATE SPECS
             // TODO: what value in implicit header
             uint8_t rcvSz = getRegister(REGRXNBBYTES);
@@ -305,18 +306,18 @@ private:
             uint8_t rdBase = getRegister(REGFIFOADDRPTR);
             if (uint8_t(currRx+rcvSz) == rdBase)
             {
-                Logless("ERR SX1278::onDio1 FALSE RX");
+                Logless(mLogger, "ERR SX1278::onDio1 FALSE RX");
                 return;
             }
 
             if (currRx>rdBase)
             {
-                Logless("ERR SX1278::onDio1 FALSE RX");
+                Logless(mLogger, "ERR SX1278::onDio1 FALSE RX");
                 rcvSz += (currRx-rdBase);
             }
             else if (currRx<rdBase)
             {
-                Logless("WRN SX1278::onDio1 CURRENTRX > READBASE! Mising Interrupt?!");
+                Logless(mLogger, "WRN SX1278::onDio1 CURRENTRX > READBASE! Mising Interrupt?!");
                 rcvSz += (255-rdBase)+currRx;
             }
 
@@ -328,12 +329,12 @@ private:
 
             if (rcvSz>=maxsize)
             {
-                Logless("WRN SX1278::onDio1 FIFO AT: _", unsigned(rdBase));
+                Logless(mLogger, "WRN SX1278::onDio1 FIFO AT: _", unsigned(rdBase));
                 mSpi.xfer(wro, wri, 1+maxsize);
                 std::memcpy(pvect.data(), wri+1, maxsize);
                 if (size_t remSize = rcvSz-maxsize)
                 {
-                    Logless("WRN SX1278::onDio1 FIFO AT: _", unsigned(getRegister(REGFIFOADDRPTR)));
+                    Logless(mLogger, "WRN SX1278::onDio1 FIFO AT: _", unsigned(getRegister(REGFIFOADDRPTR)));
                     mSpi.xfer(wro, wri, 1+remSize);
                     std::memcpy(pvect.data()+maxsize, wri+1, remSize);
                 }
@@ -342,7 +343,7 @@ private:
             {
                 mSpi.xfer(wro, wri, 1+rcvSz);
                 std::memcpy(pvect.data(), wri+1, rcvSz);
-                Logless("DBG SX1278::onDio1 FIFO AT: _", unsigned(rdBase));
+                Logless(mLogger, "DBG SX1278::onDio1 FIFO AT: _", unsigned(rdBase));
             }
 
             {
@@ -352,7 +353,7 @@ private:
 
             mRxTxDoneCv.notify_one();
             setRegister(REGIRQFLAGS, RXDONEMASK);
-            Logless("DBG SX1278::onDio1 RX DONE /");
+            Logless(mLogger, "DBG SX1278::onDio1 RX DONE /");
         }
         else
         {
@@ -361,7 +362,7 @@ private:
                 mTxDone = true;
                 setRegister(REGIRQFLAGS, TXDONEMASK);
             }
-            Logless("DBG SX1278::onDio1 TX DONE!");
+            Logless(mLogger, "DBG SX1278::onDio1 TX DONE!");
             mRxTxDoneCv.notify_one();
         }
     }
@@ -391,6 +392,7 @@ private:
 
     hwapi::ISpi& mSpi;
     hwapi::IGpio& mGpio;
+    Logger& mLogger;
 };
 
 } // flylora_sx127x
